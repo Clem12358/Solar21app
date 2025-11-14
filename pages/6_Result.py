@@ -1,6 +1,13 @@
 import streamlit as st
 import pandas as pd
 
+st.markdown("""
+    <style>
+    .stPageLink {display: none !important;}
+    </style>
+    """, unsafe_allow_html=True)
+
+
 st.title("Final Results – Solar21 Property Evaluation")
 
 # -----------------------------
