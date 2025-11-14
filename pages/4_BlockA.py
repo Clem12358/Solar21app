@@ -1,4 +1,10 @@
 import streamlit as st
+st.markdown("""
+    <style>
+    .stPageLink {display: none !important;}
+    </style>
+    """, unsafe_allow_html=True)
+
 
 st.title("Block A — Owner ROI & Impact (40%)")
 
@@ -113,6 +119,7 @@ st.session_state["A3_scores"] = A3_scores
 st.success("Block A scores saved.")
 
 if st.button("Continue to Block B →", type="primary"):
-    st.switch_page("pages/5_BlockB.py")
+    st.switch_page("5_BlockB")
+
 
 
