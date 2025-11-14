@@ -44,3 +44,20 @@ if st.button(TEXT[lang]["next"], type="primary"):
 if st.button(TEXT[lang]["back"]):
     st.session_state.language = None
     st.page_link("app.py")
+
+import streamlit as st
+from modules.sonnendach import fetch_address_data
+
+DEBUG = True   # set False in production
+
+if DEBUG:
+    st.subheader("Developer Tools")
+    test_addr = st.text_input("Test an address with Sonnendach scraper")
+    if st.button("Run Selenium Test"):
+        with st.spinner("Running Selenium test..."):
+            try:
+                data = fetch_address_data(test_addr)
+                st.success("Selenium scraper works! Data fetched:")
+                st.json(data)
+            except Exception as e:
+                st.error(f"Selenium test failed: {e}")
