@@ -1,6 +1,13 @@
 import streamlit as st
 from modules.sonnendach import fetch_address_data
 
+st.markdown("""
+    <style>
+    .stPageLink {display: none !important;}
+    </style>
+    """, unsafe_allow_html=True)
+
+
 st.title("Pass/Fail Gates")
 
 # Retrieve stored addresses
