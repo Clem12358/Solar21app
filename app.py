@@ -131,7 +131,7 @@ def render_welcome_step():
 
 
 # ----------------------------------------------------
-# STEP 3: ADDRESS INPUT
+# STEP 3: ADDRESS INPUT (NOW WITH SONNENDACH CALL)
 # ----------------------------------------------------
 def render_addresses_step():
     st.title("Client Addresses")
@@ -141,9 +141,19 @@ def render_addresses_step():
         st.session_state.step = "language"
         return
 
+    # Import Sonnendach fetcher
+    try:
+        from modules.sonnendach import fetch_address_data
+        from modules.sonnendach import ELECTRICITY_PRICES
+        sonnendach_ok = True
+    except Exception as e:
+        sonnendach_ok = False
+        st.error(f"⚠️ Debug: Cannot import sonnendach modules: {e}")
+
     if "addresses" not in st.session_state:
         st.session_state["addresses"] = []
 
+    # How many addresses?
     current_len = max(1, len(st.session_state["addresses"]))
     num_addresses = st.number_input(
         "How many addresses do you want to enter?",
@@ -174,12 +184,27 @@ def render_addresses_step():
         cleaned = [a.strip() for a in st.session_state["addresses"] if a.strip()]
         if not cleaned:
             st.error("Enter at least one valid address.")
-        else:
-            st.session_state["addresses"] = cleaned
-            st.session_state["passed_addresses"] = [
-                {"address": addr} for addr in cleaned
-            ]
-            st.session_state.step = "block_a"
+            return
+
+        st.session_state["addresses"] = cleaned
+
+        st.write("Fetching technical data (Sonnendach)…")
+
+        enriched = []
+        for addr in cleaned:
+            if sonnendach_ok:
+                data = fetch_address_data(addr)
+                # Normalize keys so the rest of the app works smoothly
+                data["pv_full_roof_kwh"] = data.get("pv_full_kwh")
+                data["avg_price_per_kwh"] = data.get("avg_electricity_price_chf_kwh")
+                enriched.append(data)
+            else:
+                enriched.append({"address": addr})
+
+        st.session_state["passed_addresses"] = enriched
+        st.success("Addresses saved — Sonnendach data loaded.")
+
+        st.session_state.step = "block_a"
 
 
 # ----------------------------------------------------
@@ -245,18 +270,17 @@ def render_block_a_step():
 
 
 # ----------------------------------------------------
-# STEP 5: BLOCK B — NEW FULLY DEBUGGED VERSION
+# STEP 5: BLOCK B (FULLY DEBUGGED AND FULLY PATCHED)
 # ----------------------------------------------------
 def render_block_b_step():
     st.title("Block B — Consumption Profile & Financial Attractiveness")
 
-    # Try importing Sonnendach
     try:
-        from modules.sonnendach import CANTON_KWH_PRICES
+        from modules.sonnendach import ELECTRICITY_PRICES
         sonnendach_ok = True
     except Exception as e:
-        st.error(f"⚠️ Debug: Sonnendach import failed: {e}")
-        CANTON_KWH_PRICES = {}
+        st.error(f"⚠️ Debug: Failed to import electricity prices: {e}")
+        ELECTRICITY_PRICES = {}
         sonnendach_ok = False
 
     passed = st.session_state.get("passed_addresses", [])
@@ -268,6 +292,7 @@ def render_block_b_step():
     if "block_b_results" not in st.session_state:
         st.session_state["block_b_results"] = {}
 
+    # Helper
     def midpoint(bucket):
         return {
             "< 100k": 50_000,
@@ -284,14 +309,14 @@ def render_block_b_step():
         st.subheader(f"🏢 {addr}")
 
         if canton is None:
-            st.warning(f"⚠️ Debug: Canton missing for {addr}")
+            st.warning(f"⚠️ Debug: Canton missing in Sonnendach data for {addr}")
 
         if pv100 is None:
-            st.warning(f"⚠️ Debug: Sonnendach PV output missing for {addr}")
+            st.warning(f"⚠️ Debug: pv_full_roof_kwh missing for {addr}")
 
         # Q1: Daytime split
         daytime = st.slider(
-            f"Share daytime consumption at {addr}",
+            f"Share of annual kWh on weekdays 08:00–18:00 at {addr}",
             0, 100, 60, 5,
             key=f"daytime_{i}"
         )
@@ -308,7 +333,7 @@ def render_block_b_step():
 
         # Q3 — seasonality
         seasonality = st.radio(
-            f"Seasonality at {addr}",
+            f"Seasonality of consumption at {addr}",
             [
                 "All months similar (±10%) → Low",
                 "Some seasonality (±10–25%) → Moderate",
@@ -320,17 +345,17 @@ def render_block_b_step():
 
         # Q4 — 24/7 loads
         loads247 = st.radio(
-            f"24/7 loads at {addr}?",
+            f"Do you run any 24/7 loads at {addr}?",
             ["Yes (reduces volatility)", "No"],
             key=f"load247_{i}"
         )
 
         # DERIVATIONS
-        if canton in CANTON_KWH_PRICES:
-            price = CANTON_KWH_PRICES[canton]
+        if canton in ELECTRICITY_PRICES:
+            price = ELECTRICITY_PRICES[canton]
         else:
             price = None
-            st.warning(f"⚠️ Debug: No canton price for {canton}")
+            st.warning(f"⚠️ Debug: No electricity price for canton '{canton}'")
 
         if price:
             annual_kwh = annual_chf / price
@@ -338,7 +363,7 @@ def render_block_b_step():
             annual_kwh = None
 
         if annual_kwh is not None and pv100:
-            sc = max(0.0, min(1.0, annual_kwh / pv100))
+            sc = max(0, min(1, annual_kwh / pv100))
         else:
             sc = None
 
@@ -351,9 +376,11 @@ def render_block_b_step():
         col1, col2, col3 = st.columns(3)
         col1.metric("Annual Spend (CHF)", f"{annual_chf:,.0f}")
         col2.metric("Self-consumption share", "n/a" if sc is None else f"{sc:.2f}")
-        col3.metric("Annual imports (CHF)", "n/a" if import_chf is None else f"{import_chf:,.0f}")
+        col3.metric(
+            "Estimated annual imports (CHF)",
+            "n/a" if import_chf is None else f"{import_chf:,.0f}"
+        )
 
-        # STORE RESULTS
         st.session_state["block_b_results"][addr] = {
             "address": addr,
             "canton": canton,
@@ -398,9 +425,7 @@ def render_results_step():
         st.write(f"**A1 (Roof scale)**: {A1.get(addr)}")
         st.write(f"**A2 (WACC)**: {A2.get(addr)}")
         st.write(f"**A3 (ESG)**: {A3.get(addr)}")
-
-        bvals = B.get(addr, {})
-        st.write("**Annual imports (CHF)**:", bvals.get("annual_import_chf"))
+        st.write(f"**Annual imports (CHF):** {B.get(addr,{}).get('annual_import_chf')}")
 
 
 # ----------------------------------------------------
