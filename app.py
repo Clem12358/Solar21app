@@ -1,4 +1,29 @@
 import streamlit as st
+st.markdown("""
+<style>
+/* Hide the sidebar completely */
+[data-testid="stSidebar"] {
+    display: none !important;
+}
+
+/* Also hide the burger menu that toggles the sidebar */
+[data-testid="stSidebarNav"] {
+    display: none !important;
+}
+
+/* Expand main container */
+main[data-testid="stAppViewContainer"] {
+    margin-left: 0 !important;
+    padding-left: 2rem !important;
+}
+
+/* Expand header area if needed */
+header[data-testid="stHeader"] {
+    margin-left: 0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 if "language" not in st.session_state:
     st.session_state.language = None
