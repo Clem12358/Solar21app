@@ -2,9 +2,18 @@ import streamlit as st
 
 st.markdown("""
     <style>
-    .stPageLink {display: none !important;}
+        /* Hide Streamlit’s default sidebar */
+        section[data-testid="stSidebar"] {
+            display: none !important;
+        }
+
+        /* Expand main content to full width */
+        div[data-testid="stAppViewContainer"] {
+            margin-left: 0 !important;
+        }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
+
 
 
 lang = st.session_state.get("language", "en")
