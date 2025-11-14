@@ -12,36 +12,42 @@ if not passed_addresses:
 
 st.write("We now evaluate the financial attractiveness and ESG potential of the remaining properties.")
 
-# ===============================
-# A1 — Scale Economies (Roof Size)
-# ===============================
+# =====================================================
+# A1 — Scale Economies (Roof Size) — SEGMENT LEVEL
+# =====================================================
 st.subheader("A1. Scale Economies (Roof Size Category) — 33%")
 
 st.write("""
-Roof size categories (from Sonnendach):
-- **Large roofs**: ≥ 3000 m² → Score **3**
-- **Medium roofs**: 1000–2999 m² → Score **2**
-- **Small roofs**: < 1000 m² → Score **1**
+This score is based on the **average roof size** across all properties 
+that passed the previous screening — not per-address.
+
+Average roof size categories:
+- **Large segment**: ≥ 3000 m² → Score **3**
+- **Medium segment**: 1000–2999 m² → Score **2**
+- **Small segment**: < 1000 m² → Score **1**
 """)
 
-A1_scores = {}
+# Calculate average roof area from passed addresses
+roof_areas = [float(item.get("surface_area_m2") or 0) for item in passed_addresses]
+avg_roof_area = sum(roof_areas) / len(roof_areas)
 
-for item in passed_addresses:
-    addr = item["address"]
-    roof_area = float(item.get("surface_area_m2") or 0)
+if avg_roof_area >= 3000:
+    A1_score = 3
+    segment_label = "Large"
+elif avg_roof_area >= 1000:
+    A1_score = 2
+    segment_label = "Medium"
+else:
+    A1_score = 1
+    segment_label = "Small"
 
-    if roof_area >= 3000:
-        score = 3
-        category = "Large"
-    elif roof_area >= 1000:
-        score = 2
-        category = "Medium"
-    else:
-        score = 1
-        category = "Small"
+st.info(
+    f"Average roof size across passed properties: **{round(avg_roof_area,1)} m²** → "
+    f"**{segment_label} segment** → Score **{A1_score}**"
+)
 
-    A1_scores[addr] = int(score)  # numeric guarantee
-    st.write(f"**{addr}** → {roof_area} m² → **{category} roof** → Score **{score}**")
+# Save as a single scalar
+st.session_state["A1_score_segment"] = A1_score
 
 
 # ===============================
@@ -50,7 +56,7 @@ for item in passed_addresses:
 st.subheader("A2. Owner Cost of Capital (WACC proxy) — 33%")
 
 st.write("""
-Choose the type of owner:
+Choose the type of owner per address:
 - **3 = Low-WACC** (municipalities, hospitals, co-ops, listed funds)
 - **2 = Medium-WACC** (institutional private owners)
 - **1 = High-WACC** (SMEs or private individuals)
@@ -67,7 +73,7 @@ for item in passed_addresses:
         index=0,
         key=f"A2_{addr}"
     )
-    A2_scores[addr] = int(value)  # numeric guarantee
+    A2_scores[addr] = int(value)
 
 
 # ===============================
@@ -95,13 +101,12 @@ for item in passed_addresses:
         key=f"A3_{addr}"
     )
 
-    A3_scores[addr] = int(score_map[choice])  # numeric guarantee
+    A3_scores[addr] = int(score_map[choice])
 
 
 # ----------------------------
 # Save results
 # ----------------------------
-st.session_state["A1_scores"] = A1_scores
 st.session_state["A2_scores"] = A2_scores
 st.session_state["A3_scores"] = A3_scores
 
