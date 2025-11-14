@@ -21,14 +21,13 @@ if not passed_addresses:
     st.stop()
 
 # -------------------------------------------------------
-# Weighting Model (simple, transparent)
+# Weighting Model — transparent & balanced
 # -------------------------------------------------------
 WEIGHT_A = 0.40   # Block A total
 WEIGHT_B = 0.40   # Block B total
 
-# Each sub-criterion gets equal weight inside its block
-W_A = WEIGHT_A / 3       # ~0.133 each
-W_B = WEIGHT_B / 3       # ~0.133 each
+W_A = WEIGHT_A / 3     # A1, A2, A3 (each ~0.133)
+W_B = WEIGHT_B / 3     # B1, B2, B3 (each ~0.133)
 
 # -----------------------------
 # Build consolidated dataframe
@@ -62,7 +61,7 @@ for item in passed_addresses:
         score_legal * W_B
     )
 
-    # Final score (A + B)
+    # Final weighted score across blocks
     final_score = round(score_A_total + score_B_total, 3)
 
     # ---------------------
@@ -106,9 +105,10 @@ st.dataframe(df, use_container_width=True)
 best = df.iloc[0]
 
 st.success(
-    f"🏆 **Top Recommendation:** **{best['Address']}**\n\n"
+    f"🏆 **Top Recommendation: {best['Address']}**\n\n"
     f"- Roof Area: **{best['Roof Area (m²)']} m²**\n"
     f"- PV Potential: **{best['PV Potential (kWh)']} kWh/year**\n"
+    f"- Canton: **{best['Canton']}**\n"
     f"- Electricity Price: **{best['Electricity Price (CHF/kWh)']} CHF/kWh**\n"
     f"- Final Score: **{best['Final Score']}**"
 )
