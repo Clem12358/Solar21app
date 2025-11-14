@@ -4,16 +4,31 @@ import pandas as pd
 st.title("Final Results – Solar21 Property Evaluation")
 
 # -----------------------------
-# Retrieve all stored session data
+# Retrieve all stored data
 # -----------------------------
 passed_addresses = st.session_state.get("passed_addresses", [])
-sonnendach_data = st.session_state.get("sonnendach_results", [])
-blockA = st.session_state.get("blockA_scores", {})
-blockB = st.session_state.get("blockB_scores", {})
+
+A1 = st.session_state.get("A1_scores", {})
+A2 = st.session_state.get("A2_scores", {})
+A3 = st.session_state.get("A3_scores", {})
+
+B = st.session_state.get("blockB_scores", {})
+
+sonnendach = st.session_state.get("sonnendach_results", [])
 
 if not passed_addresses:
     st.error("No passed addresses found. Please start again.")
     st.stop()
+
+# -------------------------------------------------------
+# Weighting Model (simple, transparent)
+# -------------------------------------------------------
+WEIGHT_A = 0.40   # Block A total
+WEIGHT_B = 0.40   # Block B total
+
+# Each sub-criterion gets equal weight inside its block
+W_A = WEIGHT_A / 3       # ~0.133 each
+W_B = WEIGHT_B / 3       # ~0.133 each
 
 # -----------------------------
 # Build consolidated dataframe
@@ -23,39 +38,58 @@ rows = []
 for item in passed_addresses:
     address = item["address"]
 
-    A = blockA.get(address, {})
-    B = blockB.get(address, {})
+    # ----- Block A -----
+    score_A1 = A1.get(address, 0)
+    score_A2 = A2.get(address, 0)
+    score_A3 = A3.get(address, 0)
 
-    # Compute a final score (simple model: equal weights)
-    final_score = (
-        A.get("rooftype_score", 0) +
-        A.get("neighbor_score", 0) +
-        A.get("partner_score", 0) +
-        B.get("consumption_score", 0) +
-        B.get("tariff_score", 0) +
-        B.get("payback_score", 0)
+    score_A_total = (
+        score_A1 * W_A +
+        score_A2 * W_A +
+        score_A3 * W_A
     )
 
-    row = {
+    # ----- Block B -----
+    B_addr = B.get(address, {})
+
+    score_price = B_addr.get("price_score", 0)
+    score_stability = B_addr.get("stability_score", 0)
+    score_legal = B_addr.get("legal_score", 0)
+
+    score_B_total = (
+        score_price * W_B +
+        score_stability * W_B +
+        score_legal * W_B
+    )
+
+    # Final score (A + B)
+    final_score = round(score_A_total + score_B_total, 3)
+
+    # ---------------------
+    # Construct output row
+    # ---------------------
+    rows.append({
         "Address": address,
         "Roof Area (m²)": item.get("surface_area_m2"),
         "PV Potential (kWh)": item.get("pv_full_kwh"),
         "Pitch (°)": item.get("roof_pitch_deg"),
         "Heading (°)": item.get("roof_heading_deg"),
         "Canton": item.get("canton"),
-        "Canton Electricity Price (Rp/kWh)": item.get("canton_price"),
-        # ----- Block A -----
-        "A_RoofType": A.get("rooftype_score"),
-        "A_Neighbors": A.get("neighbor_score"),
-        "A_PartnerFit": A.get("partner_score"),
-        # ----- Block B -----
-        "B_Consumption": B.get("consumption_score"),
-        "B_Tariff": B.get("tariff_score"),
-        "B_Payback": B.get("payback_score"),
-        # Final
+        "Electricity Price (CHF/kWh)": item.get("avg_electricity_price_chf_kwh"),
+
+        # Block A
+        "A1 Roof Size": score_A1,
+        "A2 Cost of Capital": score_A2,
+        "A3 ESG": score_A3,
+
+        # Block B
+        "B Price": score_price,
+        "B Stability": score_stability,
+        "B Legal": score_legal,
+
+        # Final weighted score
         "Final Score": final_score,
-    }
-    rows.append(row)
+    })
 
 df = pd.DataFrame(rows)
 df = df.sort_values("Final Score", ascending=False)
@@ -73,9 +107,9 @@ best = df.iloc[0]
 
 st.success(
     f"🏆 **Top Recommendation:** **{best['Address']}**\n\n"
-    f"- Roof: **{best['Roof Area (m²)']} m²**\n"
-    f"- PV potential: **{best['PV Potential (kWh)']} kWh/year**\n"
-    f"- Electricity price: **{best['Canton Electricity Price (Rp/kWh)']} Rp/kWh**\n"
+    f"- Roof Area: **{best['Roof Area (m²)']} m²**\n"
+    f"- PV Potential: **{best['PV Potential (kWh)']} kWh/year**\n"
+    f"- Electricity Price: **{best['Electricity Price (CHF/kWh)']} CHF/kWh**\n"
     f"- Final Score: **{best['Final Score']}**"
 )
 
