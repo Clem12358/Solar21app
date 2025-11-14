@@ -3,27 +3,31 @@ import streamlit as st
 # =========================================
 # COMPLETE SIDEBAR REMOVAL + FULL-WIDTH PAGE
 # =========================================
-st.markdown(
-    """
-    <style>
-    /* Hide full sidebar */
-    section[data-testid="stSidebar"] {
-        display: none !important;
-    }
-    div[data-testid="stSidebarNav"] {
-        display: none !important;
-    }
+st.markdown("""
+<style>
+/* Hide the sidebar completely */
+[data-testid="stSidebar"] {
+    display: none !important;
+}
 
-    /* Expand main content to full width */
-    div[data-testid="stAppViewContainer"] {
-        margin-left: 0 !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+/* Also hide the burger menu that toggles the sidebar */
+[data-testid="stSidebarNav"] {
+    display: none !important;
+}
+
+/* Expand main container */
+main[data-testid="stAppViewContainer"] {
+    margin-left: 0 !important;
+    padding-left: 2rem !important;
+}
+
+/* Expand header area if needed */
+header[data-testid="stHeader"] {
+    margin-left: 0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 
 # =========================================
