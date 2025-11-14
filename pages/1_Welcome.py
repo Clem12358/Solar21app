@@ -1,38 +1,28 @@
 import streamlit as st
 
-# =========================================
-# COMPLETE SIDEBAR REMOVAL + FULL-WIDTH PAGE
-# =========================================
-st.markdown("""
-<style>
-/* Hide the sidebar completely */
-[data-testid="stSidebar"] {
-    display: none !important;
-}
+# ----------------------------
+# Hide default sidebar & use full width
+# ----------------------------
+st.markdown(
+    """
+    <style>
+    /* Hide Streamlit’s default sidebar */
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
 
-/* Also hide the burger menu that toggles the sidebar */
-[data-testid="stSidebarNav"] {
-    display: none !important;
-}
+    /* Expand main content to full width */
+    div[data-testid="stAppViewContainer"] {
+        margin-left: 0 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-/* Expand main container */
-main[data-testid="stAppViewContainer"] {
-    margin-left: 0 !important;
-    padding-left: 2rem !important;
-}
-
-/* Expand header area if needed */
-header[data-testid="stHeader"] {
-    margin-left: 0 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-
-# =========================================
-# LANGUAGE HANDLING
-# =========================================
+# ----------------------------
+# Language from session state
+# ----------------------------
 lang = st.session_state.get("language", "en")
 
 TEXT = {
@@ -44,7 +34,7 @@ TEXT = {
             "\n\nClick *Next* to continue."
         ),
         "next": "Next →",
-        "back": "← Back"
+        "back": "← Back",
     },
     "fr": {
         "title": "Bienvenue sur le pré-check partenaire Solar21",
@@ -54,7 +44,7 @@ TEXT = {
             "\n\nCliquez sur *Suivant* pour continuer."
         ),
         "next": "Suivant →",
-        "back": "← Retour"
+        "back": "← Retour",
     },
     "de": {
         "title": "Willkommen zum Solar21 Partner Pre-Check",
@@ -64,23 +54,25 @@ TEXT = {
             "\n\nKlicken Sie auf *Weiter*, um fortzufahren."
         ),
         "next": "Weiter →",
-        "back": "← Zurück"
-    }
+        "back": "← Zurück",
+    },
 }
 
-# =========================================
-# PAGE CONTENT
-# =========================================
+# ----------------------------
+# UI
+# ----------------------------
 st.title(TEXT[lang]["title"])
 st.write(TEXT[lang]["text"])
 
-col1, col2 = st.columns([1, 1])
+col_back, col_next = st.columns([1, 1])
 
-with col1:
-    if st.button(TEXT[lang]["next"], type="primary", use_container_width=True):
-        st.page_link("pages/2_Addresses.py")
-
-with col2:
-    if st.button(TEXT[lang]["back"], use_container_width=True):
+with col_back:
+    if st.button(TEXT[lang]["back"]):
+        # Reset language and go back to main app page
         st.session_state.language = None
-        st.page_link("app.py")
+        st.switch_page("app.py")
+
+with col_next:
+    if st.button(TEXT[lang]["next"], type="primary"):
+        # Go to address input page
+        st.switch_page("pages/2_Addresses.py")
