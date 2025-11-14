@@ -10,26 +10,34 @@ if not passed_addresses:
     st.error("No properties available. Please complete previous steps.")
     st.stop()
 
-st.write("We now evaluate the **strategic attractiveness** of your portfolio.")
+st.write("We now evaluate the strategic attractiveness of your portfolio.")
 st.write("This block takes only 1–2 minutes.")
 
 blockB_scores = {}
 
 for item in passed_addresses:
     addr = item["address"]
+    canton_price = item.get("avg_electricity_price_chf_kwh")  # From Sonnendach
     st.subheader(f"🏢 {addr}")
 
     # ---------------------------------
-    # 1) Electricity Price (normalised)
+    # 1) Electricity Price (manual or pre-filled)
     # ---------------------------------
+    initial_price = 28
+    if canton_price:
+        # Convert CHF/kWh → a more realistic Rp/kWh scale if you want
+        # For now we keep the user-defined Rp slider and use CHF only for display
+        st.caption(f"Average electricity price for {item.get('canton')}: {canton_price} CHF/kWh")
+
     price = st.slider(
         f"Electricity price at {addr} (Rp. per kWh)",
         min_value=10,
         max_value=60,
-        value=28,
-        help="Higher prices = stronger ROI for solar"
+        value=initial_price,
+        help="Higher local prices → faster solar ROI"
     )
-    # Convert Rp/kWh into score 1–3
+
+    # Convert → score 1–3
     if price >= 40:
         price_score = 3
     elif price >= 25:
@@ -66,7 +74,7 @@ for item in passed_addresses:
         max_value=50,
         value=0,
     )
-    # Convert into score
+
     if replication >= 10:
         replication_score = 3
     elif replication >= 3:
@@ -74,9 +82,11 @@ for item in passed_addresses:
     else:
         replication_score = 1
 
+    # ---------------------------------
     # Pack final numeric results
+    # ---------------------------------
     blockB_scores[addr] = {
-        "consumption_score": int(price_score),
+        "price_score": int(price_score),           # FIXED
         "stability_score": int(stability_score),
         "esg_score": int(esg_score),
         "replication_score": int(replication_score),
