@@ -510,80 +510,170 @@ def render_results_step():
             score_A3 * W_A
         )
 
-        # Block B
-        B_addr = B.get(address, {})
+        # ===================== BLOCK B – LOAD PROFILE & SPEND =====================
 
-        price_score = B_addr.get("price_score", 0)
-        stability_score = B_addr.get("stability_score", 0)
-        esg_score = B_addr.get("esg_score", 0)
-        replication_score = B_addr.get("replication_score", 0)
+import streamlit as st
+from sonnendach import CANTON_KWH_PRICES  # adapt if different name
 
-        score_B_total = (
-            price_score * W_B +
-            stability_score * W_B +
-            esg_score * W_B +
-            replication_score * W_B
-        )
+def get_midpoint_spend(choice: str) -> float:
+    """
+    Map the user bucket to a ballpark annual spend (CHF).
+    Adjust these midpoints if you prefer other estimates.
+    """
+    mapping = {
+        "< 100k": 50_000,
+        "100–300k": 200_000,
+        "300–800k": 550_000,
+        "> 800k": 900_000,  # or 1_000_000 if you prefer
+    }
+    return mapping[choice]
 
-        final_score = round(score_A_total + score_B_total, 3)
+def render_block_b():
+    st.header("B. Consumption profile & spend")
 
-        rows.append(
-            {
-                "Address": address,
-                "Roof Area (m²)": item.get("surface_area_m2"),
-                "PV Potential (kWh)": item.get("pv_full_kwh"),
-                "Pitch (°)": item.get("roof_pitch_deg"),
-                "Heading (°)": item.get("roof_heading_deg"),
-                "Canton": item.get("canton"),
-                "Electricity Price (CHF/kWh)": item.get(
-                    "avg_electricity_price_chf_kwh"
-                ),
-                # Block A
-                "A1 Roof Size": score_A1,
-                "A2 Cost of Capital": score_A2,
-                "A3 ESG": score_A3,
-                # Block B
-                "B Price": price_score,
-                "B Stability": stability_score,
-                "B ESG Ambition": esg_score,
-                "B Replication": replication_score,
-                # Final score
-                "Final Score": final_score,
+    if "sites" not in st.session_state or not st.session_state["sites"]:
+        st.info("No addresses found from Block A. Please complete Block A first.")
+        return
+
+    # Where we store all answers / derived metrics
+    if "block_b_results" not in st.session_state:
+        st.session_state["block_b_results"] = {}
+
+    for idx, site in enumerate(st.session_state["sites"]):
+        address = site.get("address", f"Site {idx+1}")
+        canton = site.get("canton")
+        pv_full_roof_kwh = site.get("pv_full_roof_kwh")
+
+        with st.expander(f"Site {idx+1}: {address}", expanded=True):
+            st.markdown(f"**Address:** {address}")
+            if canton:
+                st.caption(f"Canton: {canton}")
+            else:
+                st.caption("Canton: (not set – please ensure Sonnendach data is available)")
+
+            # --- 1) Share of annual kWh on weekdays 08:00–18:00 ---
+            share_daytime = st.slider(
+                f"Roughly what share of annual kWh occurs weekdays 08:00–18:00 for: {address}?",
+                min_value=0,
+                max_value=100,
+                value=60,
+                step=5,
+                key=f"share_daytime_{idx}",
+                help="Ballpark % of annual consumption that happens during working hours (Mon–Fri, 08:00–18:00).",
+            )
+            share_daytime_frac = share_daytime / 100.0
+
+            # --- 2) Ballpark annual electricity spend (CHF) ---
+            spend_choice = st.radio(
+                f"Ballpark annual electricity spend (CHF) for: {address}",
+                options=["< 100k", "100–300k", "300–800k", "> 800k"],
+                index=1,
+                key=f"spend_bucket_{idx}",
+                help="Pick the closest bracket. This is only used as a ballpark for sizing.",
+            )
+            annual_spend_chf = get_midpoint_spend(spend_choice)
+
+            # --- 3) Seasonality question ---
+            seasonality = st.radio(
+                "How pronounced is the seasonal pattern in your electricity consumption?",
+                options=[
+                    "All months similar (±10%) → Low",
+                    "Some seasonality (±10–25%) → Moderate",
+                    "Strong seasonality (>±25%) → High",
+                ],
+                index=1,
+                key=f"seasonality_{idx}",
+            )
+
+            # --- 4) 24/7 loads question ---
+            has_247_loads = st.radio(
+                "Do you run any 24/7 loads (refrigeration, server rooms, critical processes)?",
+                options=["Yes (reduces volatility)", "No"],
+                index=1,
+                key=f"loads247_{idx}",
+            )
+
+            # ============= DERIVED METRICS ======================
+
+            # 4a) Retrieve avg electricity price per kWh for this canton
+            avg_price_per_kwh = None
+            if canton and canton in CANTON_KWH_PRICES:
+                avg_price_per_kwh = CANTON_KWH_PRICES[canton]
+            else:
+                st.warning(
+                    "Average electricity price for this canton not found. "
+                    "Please check CANTON_KWH_PRICES in sonnendach.py."
+                )
+
+            # 4b) Compute annual kWh consumption (ballpark)
+            annual_kwh = None
+            if avg_price_per_kwh:
+                annual_kwh = annual_spend_chf / avg_price_per_kwh
+
+            # 4c) Compute self-consumption share:
+            #     (annual electricity spend / avg price per kWh) / capacity at full roof
+            self_consumption_share = None
+            if annual_kwh is not None and pv_full_roof_kwh:
+                raw_ratio = annual_kwh / pv_full_roof_kwh
+                # Cap between 0 and 1 for sanity
+                self_consumption_share = max(0.0, min(1.0, raw_ratio))
+
+            # 4d) Compute annual import cost (CHF) using your formula:
+            #     import_CHF = (share*annual_CHF*(1-sc)) + ((1-share)*annual_CHF)
+            annual_import_chf = None
+            if self_consumption_share is not None:
+                annual_import_chf = (
+                    share_daytime_frac * annual_spend_chf * (1 - self_consumption_share)
+                    + (1 - share_daytime_frac) * annual_spend_chf
+                )
+
+            # Display derived numbers to the user
+            st.markdown("---")
+            st.subheader("Derived indicators (internal sizing logic)")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(
+                    "Ballpark annual spend (CHF)",
+                    f"{annual_spend_chf:,.0f}",
+                )
+            with col2:
+                if self_consumption_share is not None:
+                    st.metric(
+                        "Self-consumption share (ratio)",
+                        f"{self_consumption_share:.2f}",
+                    )
+                else:
+                    st.metric("Self-consumption share (ratio)", "n/a")
+            with col3:
+                if annual_import_chf is not None:
+                    st.metric(
+                        "Estimated annual imports (CHF)",
+                        f"{annual_import_chf:,.0f}",
+                        help="Higher is better for Solar21, since imports indicate room for on-site PV + RCP optimisation.",
+                    )
+                else:
+                    st.metric("Estimated annual imports (CHF)", "n/a")
+
+            # Save everything for later blocks/scoring
+            st.session_state["block_b_results"][address] = {
+                "address": address,
+                "canton": canton,
+                "share_daytime_pct": share_daytime,
+                "share_daytime_frac": share_daytime_frac,
+                "spend_bucket": spend_choice,
+                "annual_spend_chf": annual_spend_chf,
+                "seasonality": seasonality,
+                "has_247_loads": has_247_loads,
+                "avg_price_per_kwh": avg_price_per_kwh,
+                "annual_kwh": annual_kwh,
+                "pv_full_roof_kwh": pv_full_roof_kwh,
+                "self_consumption_share": self_consumption_share,
+                "annual_import_chf": annual_import_chf,
             }
-        )
 
-    df = pd.DataFrame(rows).sort_values("Final Score", ascending=False)
+    st.success("Block B completed. You can now continue to the next section.")
 
-    st.subheader("Ranking of All Valid Properties")
-    st.dataframe(df, use_container_width=True)
-
-    # Best match highlight
-    best = df.iloc[0]
-
-    st.success(
-        f"🏆 **Top Recommendation: {best['Address']}**\n\n"
-        f"- Roof Area: **{best['Roof Area (m²)']} m²**\n"
-        f"- PV Potential: **{best['PV Potential (kWh)']} kWh/year**\n"
-        f"- Canton: **{best['Canton']}**\n"
-        f"- Electricity Price: **{best['Electricity Price (CHF/kWh)']} CHF/kWh**\n"
-        f"- Final Score: **{best['Final Score']}**"
-    )
-
-    # Download
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "Download Detailed Results (CSV)",
-        data=csv,
-        file_name="solar21_results.csv",
-        mime="text/csv",
-    )
-
-    # Navigation
-    if st.button("Start Again"):
-        st.session_state.clear()
-        st.session_state.language = None
-        st.session_state.step = "language"
-        st.experimental_rerun()
 
 
 # ----------------------------------------------------
