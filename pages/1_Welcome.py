@@ -1,5 +1,12 @@
 import streamlit as st
 
+st.markdown("""
+    <style>
+    .stPageLink {display: none !important;}
+    </style>
+    """, unsafe_allow_html=True)
+
+
 lang = st.session_state.get("language", "en")
 
 TEXT = {
