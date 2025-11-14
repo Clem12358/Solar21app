@@ -1,18 +1,21 @@
 import streamlit as st
 
-st.markdown("""
+st.markdown(
+    """
     <style>
-        /* Hide Streamlit’s default sidebar */
-        section[data-testid="stSidebar"] {
-            display: none !important;
-        }
+    /* Hide the entire built-in multipage navigation */
+    div[data-testid="stSidebar"] {display: none !important;}
+    nav[data-testid="stSidebarNav"] {display: none !important;}
 
-        /* Expand main content to full width */
-        div[data-testid="stAppViewContainer"] {
-            margin-left: 0 !important;
-        }
+    /* Expand main content */
+    div[data-testid="stAppViewContainer"] {
+        margin-left: 0 !important;
+    }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
+
 
 
 
