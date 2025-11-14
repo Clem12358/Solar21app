@@ -1,5 +1,12 @@
 import streamlit as st
 
+st.markdown("""
+    <style>
+    .stPageLink {display: none !important;}
+    </style>
+    """, unsafe_allow_html=True)
+
+
 st.title("Block B — Strategic & Financial Attractiveness")
 
 # ----------------------------
