@@ -1,14 +1,16 @@
 import re
 import time
+import streamlit as st
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# -----------------------------
-# Average electricity price by canton (CHF per kWh)
-# -----------------------------
 
+# ---------------------------------------
+# Average electricity price by canton (CHF/kWh)
+# ---------------------------------------
 ELECTRICITY_PRICES = {
     "Nidwalden": 0.1956,
     "Zürich": 0.2239,
@@ -41,15 +43,12 @@ ELECTRICITY_PRICES = {
     "Neuchâtel": 0.3307,
 }
 
-# -----------------------------
-# Canton extraction helper
-# -----------------------------
 
+# ---------------------------------------
+# Canton extraction helper
+# ---------------------------------------
 def extract_canton(address: str) -> str:
-    """
-    Extracts canton from a Swiss address using keywords and abbreviations.
-    Works with addresses like "1004 Lausanne", "Bern", "Genève", etc.
-    """
+    """Extract canton from a Swiss address using names + abbreviations."""
 
     canton_keywords = {
         "VD": "Vaud", "Vaud": "Vaud",
@@ -83,14 +82,14 @@ def extract_canton(address: str) -> str:
         if re.search(rf"\b{re.escape(key)}\b", address, re.IGNORECASE):
             return val
 
-    return None  # fallback
+    return None
 
 
-# -----------------------------
-# Main Sonnendach scraping function
-# -----------------------------
-
+# ---------------------------------------
+# Selenium scraper
+# ---------------------------------------
 def get_sonnendach_info(address: str) -> dict:
+    """Launch Selenium, query Sonnendach, scrape PV + roof values."""
 
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
@@ -101,31 +100,25 @@ def get_sonnendach_info(address: str) -> dict:
     wait = WebDriverWait(driver, 40)
 
     try:
-        # Load Sonnendach
         driver.get("https://www.uvek-gis.admin.ch/BFE/sonnendach/?lang=en")
         time.sleep(2)
 
-        # Search address
         search = wait.until(EC.presence_of_element_located((By.ID, "searchTypeahead1")))
         search.send_keys(address)
         time.sleep(2)
 
-        # Click first suggestion
         first_result = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".tt-suggestion")))
         first_result.click()
         time.sleep(3)
 
-        # Ensure roof data loaded
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul.actions.uniform.show-roof")))
 
-        # Scrape required values
         suitability = wait.until(EC.presence_of_element_located((By.ID, "eignung"))).text.strip()
         pv_full = wait.until(EC.presence_of_element_located((By.ID, "pv100"))).text.strip()
         pitch = wait.until(EC.presence_of_element_located((By.ID, "pitchOutput"))).text.strip()
         heading = wait.until(EC.presence_of_element_located((By.ID, "headingOutput"))).text.strip()
         area = wait.until(EC.presence_of_element_located((By.ID, "areaOutput"))).text.strip()
 
-        # Convert numeric fields safely
         def to_float(x):
             try:
                 return float(x.replace("'", "").replace(",", "."))
@@ -145,25 +138,26 @@ def get_sonnendach_info(address: str) -> dict:
         driver.quit()
 
 
-# -----------------------------
-# Full wrapper combining Sonnendach + canton + electricity price
-# -----------------------------
-
+# ---------------------------------------
+# Wrapper with caching (recommended)
+# ---------------------------------------
+@st.cache_data(show_spinner=True, ttl=86400)  # cache 24 hours
 def fetch_address_data(address: str) -> dict:
     """
-    Returns:
-    - Sonnendach roof + PV data
-    - canton
-    - electricity price (CHF/kWh)
+    Combines:
+    - Sonnendach scraping
+    - Canton detection
+    - Electricity price lookup
     """
+
     base = get_sonnendach_info(address)
 
     canton = extract_canton(address)
-    price = ELECTRICITY_PRICES.get(canton, None)
+    price = ELECTRICITY_PRICES.get(canton)
 
     base.update({
         "canton": canton,
-        "avg_electricity_price_chf_kwh": price
+        "avg_electricity_price_chf_kwh": price,
     })
 
     return base
