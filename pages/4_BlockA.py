@@ -1,4 +1,5 @@
 import streamlit as st
+
 st.markdown("""
     <style>
     .stPageLink {display: none !important;}
