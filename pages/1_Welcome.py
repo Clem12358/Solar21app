@@ -1,15 +1,24 @@
 import streamlit as st
 
+# =========================================
+# COMPLETE SIDEBAR REMOVAL + FULL-WIDTH PAGE
+# =========================================
 st.markdown(
     """
     <style>
-    /* Hide the entire built-in multipage navigation */
-    div[data-testid="stSidebar"] {display: none !important;}
-    nav[data-testid="stSidebarNav"] {display: none !important;}
+    /* Hide full sidebar */
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+    div[data-testid="stSidebarNav"] {
+        display: none !important;
+    }
 
-    /* Expand main content */
+    /* Expand main content to full width */
     div[data-testid="stAppViewContainer"] {
         margin-left: 0 !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
     }
     </style>
     """,
@@ -17,8 +26,9 @@ st.markdown(
 )
 
 
-
-
+# =========================================
+# LANGUAGE HANDLING
+# =========================================
 lang = st.session_state.get("language", "en")
 
 TEXT = {
@@ -54,29 +64,19 @@ TEXT = {
     }
 }
 
+# =========================================
+# PAGE CONTENT
+# =========================================
 st.title(TEXT[lang]["title"])
 st.write(TEXT[lang]["text"])
 
-if st.button(TEXT[lang]["next"], type="primary"):
-    st.page_link("pages/2_Addresses.py")
+col1, col2 = st.columns([1, 1])
 
-if st.button(TEXT[lang]["back"]):
-    st.session_state.language = None
-    st.page_link("app.py")
+with col1:
+    if st.button(TEXT[lang]["next"], type="primary", use_container_width=True):
+        st.page_link("pages/2_Addresses.py")
 
-import streamlit as st
-from modules.sonnendach import fetch_address_data
-
-DEBUG = True   # set False in production
-
-if DEBUG:
-    st.subheader("Developer Tools")
-    test_addr = st.text_input("Test an address with Sonnendach scraper")
-    if st.button("Run Selenium Test"):
-        with st.spinner("Running Selenium test..."):
-            try:
-                data = fetch_address_data(test_addr)
-                st.success("Selenium scraper works! Data fetched:")
-                st.json(data)
-            except Exception as e:
-                st.error(f"Selenium test failed: {e}")
+with col2:
+    if st.button(TEXT[lang]["back"], use_container_width=True):
+        st.session_state.language = None
+        st.page_link("app.py")
