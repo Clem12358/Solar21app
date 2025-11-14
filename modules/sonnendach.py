@@ -12,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 ELECTRICITY_PRICES = {
     "Nidwalden": 0.1956,
     "Zürich": 0.2239,
-    "Zurich": 0.2239,  # fallback spelling
+    "Zurich": 0.2239,  # fallback
     "Geneva": 0.2422,
     "Schaffhausen": 0.2440,
     "Fribourg": 0.2535,
@@ -47,9 +47,10 @@ ELECTRICITY_PRICES = {
 
 def extract_canton(address: str) -> str:
     """
-    Extracts the canton from a Swiss address using simple regex rules.
+    Extracts canton from a Swiss address using keywords and abbreviations.
     Works with addresses like "1004 Lausanne", "Bern", "Genève", etc.
     """
+
     canton_keywords = {
         "VD": "Vaud", "Vaud": "Vaud",
         "GE": "Geneva", "Genève": "Geneva", "Geneva": "Geneva",
@@ -75,12 +76,12 @@ def extract_canton(address: str) -> str:
         "ZG": "Zug",
         "UR": "Uri",
         "AI": "Appenzell Innerrhoden",
-        "AR": "Appenzell Ausserrhonden",
+        "AR": "Appenzell Ausserrhoden",
     }
 
-    for key, value in canton_keywords.items():
+    for key, val in canton_keywords.items():
         if re.search(rf"\b{re.escape(key)}\b", address, re.IGNORECASE):
-            return value
+            return val
 
     return None  # fallback
 
@@ -100,32 +101,44 @@ def get_sonnendach_info(address: str) -> dict:
     wait = WebDriverWait(driver, 40)
 
     try:
+        # Load Sonnendach
         driver.get("https://www.uvek-gis.admin.ch/BFE/sonnendach/?lang=en")
         time.sleep(2)
 
+        # Search address
         search = wait.until(EC.presence_of_element_located((By.ID, "searchTypeahead1")))
         search.send_keys(address)
         time.sleep(2)
 
+        # Click first suggestion
         first_result = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".tt-suggestion")))
         first_result.click()
         time.sleep(3)
 
+        # Ensure roof data loaded
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul.actions.uniform.show-roof")))
 
+        # Scrape required values
         suitability = wait.until(EC.presence_of_element_located((By.ID, "eignung"))).text.strip()
         pv_full = wait.until(EC.presence_of_element_located((By.ID, "pv100"))).text.strip()
         pitch = wait.until(EC.presence_of_element_located((By.ID, "pitchOutput"))).text.strip()
         heading = wait.until(EC.presence_of_element_located((By.ID, "headingOutput"))).text.strip()
         area = wait.until(EC.presence_of_element_located((By.ID, "areaOutput"))).text.strip()
 
+        # Convert numeric fields safely
+        def to_float(x):
+            try:
+                return float(x.replace("'", "").replace(",", "."))
+            except:
+                return None
+
         return {
             "address": address,
             "suitability": suitability,
-            "pv_full_kwh": float(pv_full.replace("'", "")),
-            "roof_pitch_deg": float(pitch),
-            "roof_heading_deg": float(heading),
-            "surface_area_m2": float(area),
+            "pv_full_kwh": to_float(pv_full),
+            "roof_pitch_deg": to_float(pitch),
+            "roof_heading_deg": to_float(heading),
+            "surface_area_m2": to_float(area),
         }
 
     finally:
@@ -138,7 +151,7 @@ def get_sonnendach_info(address: str) -> dict:
 
 def fetch_address_data(address: str) -> dict:
     """
-    Returns a merged dict:
+    Returns:
     - Sonnendach roof + PV data
     - canton
     - electricity price (CHF/kWh)
