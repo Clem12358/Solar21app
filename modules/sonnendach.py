@@ -1,0 +1,156 @@
+import re
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# -----------------------------
+# Average electricity price by canton (CHF per kWh)
+# -----------------------------
+
+ELECTRICITY_PRICES = {
+    "Nidwalden": 0.1956,
+    "Zürich": 0.2239,
+    "Zurich": 0.2239,  # fallback spelling
+    "Geneva": 0.2422,
+    "Schaffhausen": 0.2440,
+    "Fribourg": 0.2535,
+    "Jura": 0.2550,
+    "Bern": 0.2550,
+    "Aargau": 0.2587,
+    "Appenzell Innerrhoden": 0.2629,
+    "Appenzell Ausserrhoden": 0.2672,
+    "Thurgau": 0.2752,
+    "Graubünden": 0.2756,
+    "Grisons": 0.2756,
+    "St. Gallen": 0.2772,
+    "Glarus": 0.2799,
+    "Ticino": 0.2852,
+    "Lucerne": 0.2885,
+    "Solothurn": 0.2964,
+    "Obwalden": 0.2977,
+    "Valais": 0.2996,
+    "Wallis": 0.2996,
+    "Zug": 0.3003,
+    "Uri": 0.3066,
+    "Schwyz": 0.3102,
+    "Basel-Landschaft": 0.3131,
+    "Basel-Stadt": 0.3173,
+    "Vaud": 0.3226,
+    "Neuchâtel": 0.3307,
+}
+
+# -----------------------------
+# Canton extraction helper
+# -----------------------------
+
+def extract_canton(address: str) -> str:
+    """
+    Extracts the canton from a Swiss address using simple regex rules.
+    Works with addresses like "1004 Lausanne", "Bern", "Genève", etc.
+    """
+    canton_keywords = {
+        "VD": "Vaud", "Vaud": "Vaud",
+        "GE": "Geneva", "Genève": "Geneva", "Geneva": "Geneva",
+        "ZH": "Zürich", "Zurich": "Zürich", "Zürich": "Zürich",
+        "FR": "Fribourg",
+        "NE": "Neuchâtel",
+        "BE": "Bern", "Bern": "Bern",
+        "JU": "Jura",
+        "SG": "St. Gallen",
+        "TI": "Ticino", "Tessin": "Ticino",
+        "VS": "Valais", "Wallis": "Valais",
+        "AG": "Aargau",
+        "SO": "Solothurn",
+        "BL": "Basel-Landschaft",
+        "BS": "Basel-Stadt",
+        "GR": "Graubünden", "Grisons": "Graubünden",
+        "TG": "Thurgau",
+        "GL": "Glarus",
+        "LU": "Lucerne",
+        "OW": "Obwalden",
+        "NW": "Nidwalden",
+        "SZ": "Schwyz",
+        "ZG": "Zug",
+        "UR": "Uri",
+        "AI": "Appenzell Innerrhoden",
+        "AR": "Appenzell Ausserrhonden",
+    }
+
+    for key, value in canton_keywords.items():
+        if re.search(rf"\b{re.escape(key)}\b", address, re.IGNORECASE):
+            return value
+
+    return None  # fallback
+
+
+# -----------------------------
+# Main Sonnendach scraping function
+# -----------------------------
+
+def get_sonnendach_info(address: str) -> dict:
+
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+
+    driver = webdriver.Chrome(options=options)
+    wait = WebDriverWait(driver, 40)
+
+    try:
+        driver.get("https://www.uvek-gis.admin.ch/BFE/sonnendach/?lang=en")
+        time.sleep(2)
+
+        search = wait.until(EC.presence_of_element_located((By.ID, "searchTypeahead1")))
+        search.send_keys(address)
+        time.sleep(2)
+
+        first_result = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".tt-suggestion")))
+        first_result.click()
+        time.sleep(3)
+
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul.actions.uniform.show-roof")))
+
+        suitability = wait.until(EC.presence_of_element_located((By.ID, "eignung"))).text.strip()
+        pv_full = wait.until(EC.presence_of_element_located((By.ID, "pv100"))).text.strip()
+        pitch = wait.until(EC.presence_of_element_located((By.ID, "pitchOutput"))).text.strip()
+        heading = wait.until(EC.presence_of_element_located((By.ID, "headingOutput"))).text.strip()
+        area = wait.until(EC.presence_of_element_located((By.ID, "areaOutput"))).text.strip()
+
+        return {
+            "address": address,
+            "suitability": suitability,
+            "pv_full_kwh": float(pv_full.replace("'", "")),
+            "roof_pitch_deg": float(pitch),
+            "roof_heading_deg": float(heading),
+            "surface_area_m2": float(area),
+        }
+
+    finally:
+        driver.quit()
+
+
+# -----------------------------
+# Full wrapper combining Sonnendach + canton + electricity price
+# -----------------------------
+
+def fetch_address_data(address: str) -> dict:
+    """
+    Returns a merged dict:
+    - Sonnendach roof + PV data
+    - canton
+    - electricity price (CHF/kWh)
+    """
+    base = get_sonnendach_info(address)
+
+    canton = extract_canton(address)
+    price = ELECTRICITY_PRICES.get(canton, None)
+
+    base.update({
+        "canton": canton,
+        "avg_electricity_price_chf_kwh": price
+    })
+
+    return base
