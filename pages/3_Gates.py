@@ -2,18 +2,30 @@ import streamlit as st
 from modules.sonnendach import fetch_address_data
 
 st.markdown("""
-    <style>
-        /* Hide Streamlit’s default sidebar */
-        section[data-testid="stSidebar"] {
-            display: none !important;
-        }
+<style>
+/* Hide the sidebar completely */
+[data-testid="stSidebar"] {
+    display: none !important;
+}
 
-        /* Expand main content to full width */
-        div[data-testid="stAppViewContainer"] {
-            margin-left: 0 !important;
-        }
-    </style>
+/* Also hide the burger menu that toggles the sidebar */
+[data-testid="stSidebarNav"] {
+    display: none !important;
+}
+
+/* Expand main container */
+main[data-testid="stAppViewContainer"] {
+    margin-left: 0 !important;
+    padding-left: 2rem !important;
+}
+
+/* Expand header area if needed */
+header[data-testid="stHeader"] {
+    margin-left: 0 !important;
+}
+</style>
 """, unsafe_allow_html=True)
+
 
 
 
