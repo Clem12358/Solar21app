@@ -28,6 +28,7 @@ header[data-testid="stHeader"] {
 
 
 
+
 st.title("Block B — Strategic & Financial Attractiveness")
 
 # ----------------------------
