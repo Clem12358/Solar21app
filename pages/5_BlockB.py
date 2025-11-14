@@ -97,8 +97,9 @@ st.session_state["blockB_scores"] = blockB_scores
 
 st.write("---")
 
-if st.button("Continue to Final Result →", type="primary"):
+if st.button("🚀 Go to Final Results Page", type="primary"):
     st.switch_page("6_Result")
+
 
 
 
