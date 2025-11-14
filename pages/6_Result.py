@@ -7,27 +7,23 @@ st.title("Final Results – Solar21 Property Evaluation")
 # Retrieve all stored data
 # -----------------------------
 passed_addresses = st.session_state.get("passed_addresses", [])
-
 A1 = st.session_state.get("A1_scores", {})
 A2 = st.session_state.get("A2_scores", {})
 A3 = st.session_state.get("A3_scores", {})
-
 B = st.session_state.get("blockB_scores", {})
-
-sonnendach = st.session_state.get("sonnendach_results", [])
 
 if not passed_addresses:
     st.error("No passed addresses found. Please start again.")
     st.stop()
 
 # -------------------------------------------------------
-# Weighting Model — transparent & balanced
+# Weighting Model
 # -------------------------------------------------------
-WEIGHT_A = 0.40   # Block A total
-WEIGHT_B = 0.40   # Block B total
+WEIGHT_A = 0.40          # Block A (A1,A2,A3)
+WEIGHT_B = 0.40          # Block B (price, stability, esg, replication)
 
-W_A = WEIGHT_A / 3     # A1, A2, A3 (each ~0.133)
-W_B = WEIGHT_B / 3     # B1, B2, B3 (each ~0.133)
+W_A = WEIGHT_A / 3       # each A-subscore
+W_B = WEIGHT_B / 4       # now four B-sub-scores
 
 # -----------------------------
 # Build consolidated dataframe
@@ -51,22 +47,20 @@ for item in passed_addresses:
     # ----- Block B -----
     B_addr = B.get(address, {})
 
-    score_price = B_addr.get("price_score", 0)
-    score_stability = B_addr.get("stability_score", 0)
-    score_legal = B_addr.get("legal_score", 0)
+    price_score = B_addr.get("price_score", 0)
+    stability_score = B_addr.get("stability_score", 0)
+    esg_score = B_addr.get("esg_score", 0)
+    replication_score = B_addr.get("replication_score", 0)
 
     score_B_total = (
-        score_price * W_B +
-        score_stability * W_B +
-        score_legal * W_B
+        price_score * W_B +
+        stability_score * W_B +
+        esg_score * W_B +
+        replication_score * W_B
     )
 
-    # Final weighted score across blocks
     final_score = round(score_A_total + score_B_total, 3)
 
-    # ---------------------
-    # Construct output row
-    # ---------------------
     rows.append({
         "Address": address,
         "Roof Area (m²)": item.get("surface_area_m2"),
@@ -82,25 +76,25 @@ for item in passed_addresses:
         "A3 ESG": score_A3,
 
         # Block B
-        "B Price": score_price,
-        "B Stability": score_stability,
-        "B Legal": score_legal,
+        "B Price": price_score,
+        "B Stability": stability_score,
+        "B ESG Ambition": esg_score,
+        "B Replication": replication_score,
 
-        # Final weighted score
+        # Final score
         "Final Score": final_score,
     })
 
-df = pd.DataFrame(rows)
-df = df.sort_values("Final Score", ascending=False)
+df = pd.DataFrame(rows).sort_values("Final Score", ascending=False)
 
 # -----------------------------
-# Display results
+# Display table
 # -----------------------------
 st.subheader("Ranking of All Valid Properties")
 st.dataframe(df, use_container_width=True)
 
 # -----------------------------
-# Best match
+# Best match highlight
 # -----------------------------
 best = df.iloc[0]
 
@@ -114,7 +108,7 @@ st.success(
 )
 
 # -----------------------------
-# Download CSV
+# Download
 # -----------------------------
 csv = df.to_csv(index=False).encode("utf-8")
 st.download_button(
