@@ -8,13 +8,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-# ---------------------------------------
+# -------------------------------
 # Average electricity price by canton (CHF/kWh)
-# ---------------------------------------
+# -------------------------------
 ELECTRICITY_PRICES = {
     "Nidwalden": 0.1956,
     "Zürich": 0.2239,
-    "Zurich": 0.2239,  # fallback
+    "Zurich": 0.2239,  # fallback spelling
     "Geneva": 0.2422,
     "Schaffhausen": 0.2440,
     "Fribourg": 0.2535,
@@ -44,15 +44,15 @@ ELECTRICITY_PRICES = {
 }
 
 
-# ---------------------------------------
-# Canton extraction helper
-# ---------------------------------------
+# -------------------------------
+# Canton extraction
+# -------------------------------
 def extract_canton(address: str) -> str:
     """Extract canton from a Swiss address using names + abbreviations."""
 
-    canton_keywords = {
+    patterns = {
         "VD": "Vaud", "Vaud": "Vaud",
-        "GE": "Geneva", "Genève": "Geneva", "Geneva": "Geneva",
+        "GE": "Geneva", "Geneva": "Geneva", "Genève": "Geneva",
         "ZH": "Zürich", "Zurich": "Zürich", "Zürich": "Zürich",
         "FR": "Fribourg",
         "NE": "Neuchâtel",
@@ -78,16 +78,28 @@ def extract_canton(address: str) -> str:
         "AR": "Appenzell Ausserrhoden",
     }
 
-    for key, val in canton_keywords.items():
+    for key, val in patterns.items():
         if re.search(rf"\b{re.escape(key)}\b", address, re.IGNORECASE):
             return val
 
     return None
 
 
-# ---------------------------------------
-# Selenium scraper
-# ---------------------------------------
+# -------------------------------
+# Helper: safe float parsing
+# -------------------------------
+def to_float(x):
+    if not x:
+        return None
+    try:
+        return float(x.replace("'", "").replace(",", "."))
+    except Exception:
+        return None
+
+
+# -------------------------------
+# Selenium scraping
+# -------------------------------
 def get_sonnendach_info(address: str) -> dict:
     """Launch Selenium, query Sonnendach, scrape PV + roof values."""
 
@@ -107,10 +119,12 @@ def get_sonnendach_info(address: str) -> dict:
         search.send_keys(address)
         time.sleep(2)
 
-        first_result = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".tt-suggestion")))
-        first_result.click()
+        # click first suggestion
+        result = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".tt-suggestion")))
+        result.click()
         time.sleep(3)
 
+        # wait for roof data
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul.actions.uniform.show-roof")))
 
         suitability = wait.until(EC.presence_of_element_located((By.ID, "eignung"))).text.strip()
@@ -119,35 +133,42 @@ def get_sonnendach_info(address: str) -> dict:
         heading = wait.until(EC.presence_of_element_located((By.ID, "headingOutput"))).text.strip()
         area = wait.until(EC.presence_of_element_located((By.ID, "areaOutput"))).text.strip()
 
-        def to_float(x):
-            try:
-                return float(x.replace("'", "").replace(",", "."))
-            except:
-                return None
-
+        # Always return complete structure
         return {
             "address": address,
-            "suitability": suitability,
+            "suitability": suitability or None,
             "pv_full_kwh": to_float(pv_full),
             "roof_pitch_deg": to_float(pitch),
             "roof_heading_deg": to_float(heading),
             "surface_area_m2": to_float(area),
         }
 
+    except Exception as e:
+        return {
+            "address": address,
+            "error": f"Sonnendach scraping failed: {e}",
+            "suitability": None,
+            "pv_full_kwh": None,
+            "roof_pitch_deg": None,
+            "roof_heading_deg": None,
+            "surface_area_m2": None,
+        }
+
     finally:
         driver.quit()
 
 
-# ---------------------------------------
-# Wrapper with caching (recommended)
-# ---------------------------------------
-@st.cache_data(show_spinner=True, ttl=86400)  # cache 24 hours
+# -------------------------------
+# Cached wrapper
+# -------------------------------
+@st.cache_data(show_spinner=True, ttl=86400)
 def fetch_address_data(address: str) -> dict:
     """
     Combines:
     - Sonnendach scraping
     - Canton detection
     - Electricity price lookup
+    Always returns ALL keys — downstream pages never break.
     """
 
     base = get_sonnendach_info(address)
