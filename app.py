@@ -20,16 +20,16 @@ st.markdown(f"""
 <style>
 
 /* Force radio text to be fully black and opaque */
-.stRadio label {
+.stRadio label {{
     color: #000000 !important;
     opacity: 1 !important;
     font-weight: 600 !important;
-}
+}}
 
-.stRadio div[role="radiogroup"] label {
+.stRadio div[role="radiogroup"] label {{
     color: #000000 !important;
     opacity: 1 !important;
-}
+}}
 
 
 /* Hide sidebar */
