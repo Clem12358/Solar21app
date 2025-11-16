@@ -431,31 +431,39 @@ TEXT = {
 # -------------------------------------------------------
 
 def compute_roof_score(area):
-    if area is None:
+    """
+    Calculate roof score based on usable area in m²
+    > 1000 m² = 3
+    500-1000 m² = 2
+    < 500 m² = 1
+    Missing data = 0
+    """
+    if area is None or area == 0:
         return 0
     if area > 1000:
         return 3
-    elif area > 500:
+    elif area >= 500:
         return 2
-    return 1
+    else:
+        return 1
 
 def compute_final_score(answers, roof_score):
     """Compute the final Solar21 site attractiveness score"""
     
-    # Extract owner type score (first character of the answer)
+    # Extract owner type score
     owner_str = answers["owner_type"]
-    if "Public entity" in owner_str:
+    if "Public entity" in owner_str or "Entité publique" in owner_str or "Öffentliche Einrichtung" in owner_str:
         owner_type_score = 3
-    elif "Standard commercial" in owner_str:
+    elif "Standard commercial" in owner_str or "commercial standard" in owner_str or "Standard-Gewerbe" in owner_str:
         owner_type_score = 2
     else:
         owner_type_score = 1
     
     # Extract ESG score
     esg_str = answers["esg"]
-    if esg_str.startswith("Yes"):
+    if esg_str.startswith("Yes") or esg_str.startswith("Oui") or esg_str.startswith("Ja"):
         esg_score = 3
-    elif esg_str.startswith("Not sure"):
+    elif esg_str.startswith("Not sure") or esg_str.startswith("Incertain") or esg_str.startswith("Unsicher"):
         esg_score = 2
     else:
         esg_score = 1
@@ -465,11 +473,11 @@ def compute_final_score(answers, roof_score):
     
     # Extract spend score
     spend_str = answers["spend"]
-    if "Above 800k" in spend_str:
+    if "Above 800k" in spend_str or "Plus de 800k" in spend_str or "Über 800k" in spend_str:
         spend_score = 4
-    elif "300k — 800k" in spend_str:
+    elif "300k" in spend_str and "800k" in spend_str:
         spend_score = 3
-    elif "100k — 300k" in spend_str:
+    elif "100k" in spend_str and "300k" in spend_str:
         spend_score = 2
     else:
         spend_score = 1
@@ -487,29 +495,28 @@ def compute_final_score(answers, roof_score):
     
     # Seasonality score (inverted - low variation is better)
     season_str = answers["season"]
-    if "Low seasonal" in season_str:
+    if "Low" in season_str or "Faible" in season_str or "Geringe" in season_str:
         season_score = 3
-    elif "Moderate" in season_str:
+    elif "Moderate" in season_str or "Modérée" in season_str or "Mäßige" in season_str:
         season_score = 2
     else:
         season_score = 1
     
     # 24/7 loads score
     loads_str = answers["loads"]
-    if loads_str.startswith("Yes"):
+    if loads_str.startswith("Yes") or loads_str.startswith("Oui") or loads_str.startswith("Ja"):
         loads_score = 3
     else:
         loads_score = 1
     
-    # B_total: spend + daytime + season + loads (max 13, but we'll normalize)
-    # Adjusting to max 12 as per formula
+    # B_total: spend + daytime + season + loads (max 13: 4+3+3+3)
     B_total = spend_score + daytime_score + season_score + loads_score
     
     # Normalize
     A_norm = A_total / 9
-    B_norm = B_total / 13  # actual max is 13 (4+3+3+3)
+    B_norm = B_total / 13  # max is 13 (4+3+3+3)
     
-    # Apply weights
+    # Apply weights: 40% structure (A), 60% consumption (B)
     final_score = 0.40 * A_norm + 0.60 * B_norm
     
     # Convert to 0-100 scale
