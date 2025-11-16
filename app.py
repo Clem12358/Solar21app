@@ -41,7 +41,6 @@ st.markdown(
         height: 6px;
         border-radius: 4px;
         background-color: #0072ff;
-        width: 8%;
     }
     </style>
     """,
@@ -57,23 +56,32 @@ if "language" not in st.session_state:
 if "step" not in st.session_state:
     st.session_state.step = "language"
 
+# ----------------------------------------------------
+# NAVIGATION BUTTONS
+# ----------------------------------------------------
+def nav_buttons(back_step=None, next_step=None, next_label="Continue →"):
+    col1, col2 = st.columns([1,1])
+    if back_step:
+        if col1.button("← Back"):
+            st.session_state.step = back_step
+            st.rerun()
+
+    if next_step:
+        if col2.button(next_label, type="primary"):
+            st.session_state.step = next_step
+            st.rerun()
+
 
 # ----------------------------------------------------
-# STEP 1 — LANGUAGE (auto-continue)
+# STEP 1: LANGUAGE SELECTION
 # ----------------------------------------------------
 def render_language_step():
-    st.markdown(
-        """
-        <div class="progress-wrapper"><div class="progress-bar"></div></div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     st.title("Solar21 Pre-Check")
+
     st.subheader("Choose your language")
 
     col1, col2, col3 = st.columns(3)
-
     if col1.button("🇬🇧 English", use_container_width=True):
         st.session_state.language = "en"
         st.session_state.step = "welcome"
@@ -91,21 +99,21 @@ def render_language_step():
 
 
 # ----------------------------------------------------
-# STEP 2 — WELCOME
+# STEP 2: WELCOME PAGE
 # ----------------------------------------------------
 def render_welcome_step():
-    lang = st.session_state.language
+    lang = st.session_state.get("language", "en")
 
     TEXT = {
         "en": {
             "title": "Welcome to the Solar21 Partner Pre-Check",
-            "text": "Evaluate in **under two minutes** whether your client's building fits Solar21’s profile.",
+            "text": "Evaluate in **under two minutes** whether your client’s building fits Solar21’s profile.",
             "next": "Next →",
             "back": "← Back",
         },
         "fr": {
             "title": "Bienvenue sur le pré-check partenaire Solar21",
-            "text": "Évaluez en **moins de deux minutes** si le bâtiment du client correspond aux critères Solar21.",
+            "text": "Évaluez en **moins de deux minutes** si le bâtiment de votre client correspond aux critères Solar21.",
             "next": "Suivant →",
             "back": "← Retour",
         },
@@ -119,261 +127,207 @@ def render_welcome_step():
 
     st.title(TEXT[lang]["title"])
     st.write(TEXT[lang]["text"])
+    st.write("")
 
-    col1, col2 = st.columns(2)
-
-    if col1.button(TEXT[lang]["back"]):
-        st.session_state.step = "language"
-        st.rerun()
-
-    if col2.button(TEXT[lang]["next"], type="primary"):
-        st.session_state.step = "addresses"
-        st.rerun()
+    nav_buttons(back_step="language", next_step="addresses", next_label=TEXT[lang]["next"])
 
 
 # ----------------------------------------------------
-# STEP 3 — ADDRESS INPUT + canton dropdown
+# STEP 3: ADDRESS INPUT + USER CHOOSES CANTON
 # ----------------------------------------------------
 def render_addresses_step():
     st.title("Client Addresses")
 
-    try:
-        from modules.sonnendach import fetch_address_data
-        sonnendach_ok = True
-    except:
-        sonnendach_ok = False
-        st.error("⚠️ Sonnendach module missing or broken.")
-
     if "addresses" not in st.session_state:
-        st.session_state.addresses = []
+        st.session_state["addresses"] = []
+    if "cantons" not in st.session_state:
+        st.session_state["cantons"] = {}
 
-    if "cantons_selected" not in st.session_state:
-        st.session_state.cantons_selected = {}
-
-    # Number of fields
-    count = st.number_input(
-        "How many addresses?",
+    num_addresses = st.number_input(
+        "How many addresses do you want to enter?",
         min_value=1,
         max_value=20,
+        value=max(1, len(st.session_state["addresses"])),
         step=1,
-        value=max(1, len(st.session_state.addresses))
     )
 
-    # Resize internal list
-    lst = st.session_state.addresses
-    if len(lst) < count:
-        lst += [""] * (count - len(lst))
+    addresses = st.session_state["addresses"]
+    if len(addresses) < num_addresses:
+        addresses += [""] * (num_addresses - len(addresses))
     else:
-        lst = lst[:count]
-    st.session_state.addresses = lst
+        addresses = addresses[:num_addresses]
+    st.session_state["addresses"] = addresses
 
-    CANTON_OPTIONS = [
-        "AG","AI","AR","BE","BL","BS","FR","GE","GL","GR",
-        "JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG",
-        "TI","UR","VD","VS","ZG","ZH"
+    CANTON_LIST = [
+        "Zurich", "Bern", "Lucerne", "Uri", "Schwyz", "Obwalden", "Nidwalden", "Glarus", "Zug",
+        "Fribourg", "Solothurn", "Basel-Stadt", "Basel-Landschaft", "Schaffhausen", "Appenzell Ausserrhoden",
+        "Appenzell Innerrhoden", "St. Gallen", "Graubünden", "Aargau", "Thurgau", "Ticino",
+        "Vaud", "Valais", "Neuchâtel", "Geneva", "Jura"
     ]
 
-    with st.form("addr_form"):
-        for i in range(count):
-            colA, colB = st.columns([3,1])
-            st.session_state.addresses[i] = colA.text_input(
-                f"Address {i+1}",
-                st.session_state.addresses[i],
-                key=f"addr_{i}"
-            )
+    with st.form("address_form"):
+        for i in range(num_addresses):
+            addr = st.text_input(f"Address {i+1}", addresses[i], key=f"addr_{i}")
+            st.session_state["addresses"][i] = addr
 
-            st.session_state.cantons_selected[i] = colB.selectbox(
-                "Canton",
-                CANTON_OPTIONS,
-                key=f"ct_{i}"
+            st.session_state["cantons"][addr] = st.selectbox(
+                f"Canton for {addr or 'Address'}",
+                CANTON_LIST,
+                key=f"canton_{i}",
             )
 
         submitted = st.form_submit_button("Save and continue →")
 
     if submitted:
-        cleaned = [a.strip() for a in st.session_state.addresses if a.strip()]
-        if not cleaned:
-            st.error("Enter at least one valid address.")
-            return
-
-        enriched = []
-        for idx, addr in enumerate(cleaned):
-            canton = st.session_state.cantons_selected.get(idx)
-
-            if sonnendach_ok:
-                data = fetch_address_data(addr)
-            else:
-                data = {"address": addr}
-
-            data["canton"] = canton
-            enriched.append(data)
-
-        st.session_state.passed_addresses = enriched
+        valid_addresses = [a for a in st.session_state["addresses"] if a.strip()]
+        st.session_state["passed_addresses"] = [
+            {"address": a, "canton": st.session_state["cantons"][a]}
+            for a in valid_addresses
+        ]
         st.session_state.step = "block_a"
         st.rerun()
 
+    nav_buttons(back_step="welcome")
+
 
 # ----------------------------------------------------
-# STEP 4 — BLOCK A
+# STEP 4: BLOCK A — ROI / OWNER QUESTIONS
 # ----------------------------------------------------
 def render_block_a_step():
-    st.title("Block A — Owner ROI & Impact")
+    st.title("Block A — Owner ROI & Impact (40%)")
 
     passed = st.session_state.get("passed_addresses", [])
-    if not passed:
-        st.error("Missing address data.")
-        st.session_state.step = "addresses"
-        st.rerun()
 
-    # A1 — Roof size
-    areas = [float(p.get("surface_area_m2") or 0) for p in passed]
-    avg_area = sum(areas) / len(areas) if areas else 0
+    st.subheader("A1 — Roof scale (automatic)")
+    st.write("The optimal roof size for Solar21 is > 1000 m².")
 
-    if avg_area >= 3000:
-        score = 3
-    elif avg_area >= 1000:
-        score = 2
-    else:
-        score = 1
+    # For demo, random placeholder (in real app you use Sonnendach scraping)
+    roof_areas = [3000] * len(passed)
+    avg_area = sum(roof_areas) / len(roof_areas)
+    A1_score = 3 if avg_area >= 3000 else (2 if avg_area >= 1000 else 1)
+    st.info(f"Avg roof area: {avg_area:.1f} m² → Score {A1_score}")
 
-    st.info(f"Avg roof area: {avg_area:.1f} m² → Score {score}")
+    st.session_state["A1_scores"] = {p["address"]: A1_score for p in passed}
 
-    st.session_state.A1_scores = {p["address"]: score for p in passed}
+    st.write("")
 
-    # A2 — WACC proxy
-    A2 = {}
+    st.subheader("A2 — Owner category (WACC proxy)")
+    st.write("Choose **the type of owner**. This affects required returns and deal feasibility.")
+
+    A2_scores = {}
     for p in passed:
         addr = p["address"]
-        A2[addr] = st.radio(
-            f"WACC category for {addr}",
-            [3, 2, 1],
+        choice = st.radio(
+            f"Owner type for {addr}",
+            [
+                "3 — Public, institutional, very low cost of capital",
+                "2 — Standard commercial owner",
+                "1 — Private individual / SME with high capital constraints"
+            ],
             key=f"A2_{addr}"
         )
-    st.session_state.A2_scores = A2
+        A2_scores[addr] = int(choice[0])
+    st.session_state["A2_scores"] = A2_scores
 
-    # A3 — ESG
-    A3 = {}
+    st.write("")
+
+    st.subheader("A3 — ESG visibility")
+    st.write("Is the owner **actively interested** in sustainability benefits?")
+
+    map_esg = {"Yes": 3, "IDK": 2, "No": 1}
+    A3_scores = {}
     for p in passed:
         addr = p["address"]
-        val = st.radio(
-            f"ESG relevance for {addr}",
-            ["Yes","IDK","No"],
-            key=f"A3_{addr}"
-        )
-        A3[addr] = {"Yes":3,"IDK":2,"No":1}[val]
-    st.session_state.A3_scores = A3
+        ch = st.radio(f"ESG relevance for {addr}", ["Yes", "IDK", "No"], key=f"A3_{addr}")
+        A3_scores[addr] = map_esg[ch]
+    st.session_state["A3_scores"] = A3_scores
 
-    if st.button("Continue to Block B →", type="primary"):
-        st.session_state.step = "block_b"
-        st.rerun()
+    nav_buttons(back_step="addresses", next_step="block_b")
 
 
 # ----------------------------------------------------
-# STEP 5 — BLOCK B
+# STEP 5: BLOCK B — CONSUMPTION / FINANCIAL
 # ----------------------------------------------------
 def render_block_b_step():
     st.title("Block B — Consumption Profile & Financial Attractiveness")
 
-    from modules.sonnendach import ELECTRICITY_PRICES
-
     passed = st.session_state.get("passed_addresses", [])
-    if not passed:
-        st.error("Missing address data.")
-        st.session_state.step = "addresses"
-        st.rerun()
-
     if "block_b_results" not in st.session_state:
-        st.session_state.block_b_results = {}
+        st.session_state["block_b_results"] = {}
 
     def midpoint(bucket):
         return {
             "< 100k": 50_000,
             "100–300k": 200_000,
             "300–800k": 550_000,
-            "> 800k": 900_000
+            "> 800k": 900_000,
         }.get(bucket, 0)
+
+    ELECTRICITY_PRICES = {
+        "Vaud": 0.3226, "Geneva": 0.2422, "St. Gallen": 0.2772,
+        "Zurich": 0.2239, "Bern": 0.2550, "Ticino": 0.2852
+    }
 
     for i, site in enumerate(passed):
         addr = site["address"]
-        canton = site.get("canton")
-        pv100 = site.get("pv_full_roof_kwh")
+        canton = site["canton"]
 
         st.subheader(f"🏢 {addr}")
 
-        # Inputs
+        # Q1 daytime %
         daytime = st.slider(
-            f"Daytime % at {addr}",
-            0, 100, 60, 5,
-            key=f"dt_{i}"
+            f"Typical share of consumption during weekdays 08:00–18:00 at {addr}",
+            0, 100, 60, 5, key=f"daytime_{i}"
         )
-        s = daytime / 100
+        daytime_frac = daytime / 100
 
-        spend_bucket = st.radio(
-            f"Annual spend at {addr}",
-            ["< 100k","100–300k","300–800k","> 800k"],
-            index=1,
-            key=f"sb_{i}"
+        # Q2 annual spend
+        spend = st.radio(
+            f"Annual electricity bill for {addr}",
+            ["< 100k", "100–300k", "300–800k", "> 800k"],
+            key=f"spend_{i}"
         )
-        annual_chf = midpoint(spend_bucket)
+        annual_chf = midpoint(spend)
 
-        seasonality = st.radio(
-            f"Seasonality at {addr}",
-            [
-                "Low (±10%)",
-                "Moderate (±10–25%)",
-                "High (>±25%)"
-            ],
-            index=1,
-            key=f"ssn_{i}"
+        # Q3 seasonality
+        season = st.radio(
+            f"Seasonality of electricity usage at {addr}",
+            ["Low (±10%)", "Moderate (±10–25%)", "High (±25%)"],
+            key=f"season_{i}"
         )
 
+        # Q4 24/7 loads
         loads247 = st.radio(
-            f"24/7 loads at {addr}?",
-            ["Yes","No"],
-            key=f"l247_{i}"
+            f"Does {addr} have stable 24/7 loads?",
+            ["Yes", "No"],
+            key=f"load247_{i}"
         )
 
-        # Derivations
-        price = ELECTRICITY_PRICES.get(canton)
+        # Compute
+        price = ELECTRICITY_PRICES.get(canton, None)
         annual_kwh = annual_chf / price if price else None
-        sc = max(0, min(1, (annual_kwh / pv100))) if (annual_kwh and pv100) else None
-        import_chf = (
-            s * annual_chf * (1 - sc) + (1 - s) * annual_chf
-        ) if sc is not None else None
+        pv100 = 550_000  # placeholder
+        sc = min(1, annual_kwh / pv100) if annual_kwh and pv100 else None
+        imports = daytime_frac * annual_chf * (1 - sc) + (1 - daytime_frac) * annual_chf if sc is not None else None
 
-        # Display
         st.markdown("---")
         col1, col2, col3 = st.columns(3)
 
         col1.metric("Annual spend (CHF)", f"{annual_chf:,.0f}")
-        col2.metric("Self-consumption", f"{sc:.2f}" if sc is not None else "n/a")
-        col3.metric(
-            "Imports (CHF)",
-            f"{import_chf:,.0f}" if import_chf is not None else "n/a"
-        )
+        col2.metric("Self-consumption", "n/a" if sc is None else f"{sc:.2f}")
+        col3.metric("Imports (CHF)", "n/a" if imports is None else f"{imports:,.0f}")
 
-        # Store
-        st.session_state.block_b_results[addr] = {
-            "address": addr,
-            "canton": canton,
+        st.session_state["block_b_results"][addr] = {
             "annual_spend_chf": annual_chf,
-            "seasonality": seasonality,
-            "loads247": loads247,
-            "daytime_frac": s,
-            "avg_price_per_kwh": price,
-            "annual_kwh": annual_kwh,
-            "pv_full_roof_kwh": pv100,
             "self_consumption_share": sc,
-            "annual_import_chf": import_chf
+            "annual_import_chf": imports,
         }
 
-    if st.button("Continue to Results →", type="primary"):
-        st.session_state.step = "results"
-        st.rerun()
+    nav_buttons(back_step="block_a", next_step="results")
 
 
 # ----------------------------------------------------
-# STEP 6 — RESULTS
+# STEP 6: RESULTS
 # ----------------------------------------------------
 def render_results_step():
     st.title("Final Results — Solar21 Evaluation")
@@ -384,13 +338,24 @@ def render_results_step():
     A3 = st.session_state.get("A3_scores", {})
     B = st.session_state.get("block_b_results", {})
 
-    for p in passed:
-        addr = p["address"]
+    for site in passed:
+        addr = site["address"]
         st.subheader(addr)
-        st.write(f"A1 (Roof): {A1.get(addr)}")
-        st.write(f"A2 (WACC): {A2.get(addr)}")
-        st.write(f"A3 (ESG): {A3.get(addr)}")
-        st.write(f"Annual imports (CHF): {B.get(addr,{}).get('annual_import_chf')}")
+        st.write(f"**A1 (Roof):** {A1.get(addr)}")
+        st.write(f"**A2 (WACC):** {A2.get(addr)}")
+        st.write(f"**A3 (ESG):** {A3.get(addr)}")
+
+        imports = B.get(addr, {}).get("annual_import_chf")
+        st.write(f"**Annual imports (CHF):** {imports if imports else 'None'}")
+
+        st.markdown("---")
+
+    if st.button("🔄 Start again"):
+        st.session_state.clear()
+        st.session_state.step = "language"
+        st.rerun()
+
+    nav_buttons(back_step="block_b")
 
 
 # ----------------------------------------------------
@@ -410,6 +375,3 @@ elif step == "block_b":
     render_block_b_step()
 elif step == "results":
     render_results_step()
-else:
-    st.session_state.step = "language"
-    st.rerun()
