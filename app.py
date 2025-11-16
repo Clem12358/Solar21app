@@ -26,11 +26,12 @@ st.markdown(f"""
     font-weight: 600 !important;
 }}
 
-.stRadio div[role="radiogroup"] label {{
+/* THIS is the important one: inner span where Streamlit actually puts the text */
+.stRadio div[role="radiogroup"] label span {{
     color: #000000 !important;
     opacity: 1 !important;
+    font-size: 1.02rem !important;
 }}
-
 
 /* Hide sidebar */
 [data-testid="stSidebar"], [data-testid="stSidebarNav"] {{
@@ -80,16 +81,6 @@ hr {{
     box-shadow: 0 6px 16px rgba(0,0,0,0.12);
 }}
 
-/* Radios + labels */
-.stRadio > label {{
-    font-weight: 600 !important;
-    color: #111111 !important;
-}}
-.stRadio div[role="radiogroup"] label {{
-    color: #111111 !important;
-    font-size: 1.02rem !important;
-}}
-
 /* Accent color for radio + slider */
 input[type="radio"], input[type="range"] {{
     accent-color: {PRIMARY_GREEN};
@@ -112,6 +103,7 @@ input[type="radio"], input[type="range"] {{
 .stSlider > div > div > div {{
     color: #111111 !important;
 }}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -121,7 +113,7 @@ input[type="radio"], input[type="range"] {{
 logo_path = Path(__file__).parent / "solar21_logo.png"
 
 st.markdown(
-    f"""
+    """
     <div style="
         width: 100%;
         display: flex;
