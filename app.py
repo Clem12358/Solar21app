@@ -9,46 +9,46 @@ st.set_page_config(
     page_title="Solar21 Evaluation Tool",
 )
 
+# -----------------------------
+# GLOBAL DESIGN OVERRIDES
+# -----------------------------
+st.markdown("""
+<style>
+
+    /* Completely hide the Streamlit sidebar */
+    [data-testid="stSidebar"] { display: none; }
+    [data-testid="stSidebarNav"] { display: none; }
+
+    /* Force full-width layout */
+    .block-container {
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+
+    /* White background everywhere */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+        background-color: white !important;
+        color: black !important;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: black !important;
+    }
+
+</style>
+""", unsafe_allow_html=True)
+
+
+
 # -------------------------------------------------------
 # CUSTOM CSS (Solar21 style)
 # -------------------------------------------------------
 logo_path = "solar21_logo.png"
 
 st.markdown(
-    f"""
-    <style>
-        .main {{
-            background-color: #0b0b0b;
-            color: white;
-        }}
-
-        h1, h2, h3, h4 {{
-            color: white !important;
-            font-weight: 700 !important;
-        }}
-
-        .stButton>button {{
-            background-color: #00FF40 !important;
-            color: black !important;
-            font-weight: bold;
-            border-radius: 8px;
-            border: none;
-            padding: 0.6rem 1.2rem;
-        }}
-
-        .stRadio>div>label {{
-            font-size: 1.05rem !important;
-        }}
-
-        #logo-wrapper {{
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }}
-    </style>
-
-    <div id="logo-wrapper">
-        <img src="data:image/png;base64,{st.image(logo_path, output_format="PNG", use_column_width=False)}">
+    """
+    <div style="text-align:center; margin-top:20px; margin-bottom:20px;">
+        <img src="solar21_logo.png" width="300">
     </div>
     """,
     unsafe_allow_html=True
