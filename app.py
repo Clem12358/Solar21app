@@ -1,4 +1,5 @@
 import streamlit as st
+from pathlib import Path
 from modules.sonnendach import get_sonnendach_info
 
 # -------------------------------------------------------
@@ -12,47 +13,109 @@ st.set_page_config(
 # -----------------------------
 # GLOBAL DESIGN OVERRIDES
 # -----------------------------
-st.markdown("""
+PRIMARY_GREEN = "#00E20C"   # from the logo
+PRIMARY_DARK = "#000000"
+
+st.markdown(f"""
 <style>
+/* Hide sidebar */
+[data-testid="stSidebar"], [data-testid="stSidebarNav"] {{
+    display: none !important;
+}}
 
-    /* Completely hide the Streamlit sidebar */
-    [data-testid="stSidebar"] { display: none; }
-    [data-testid="stSidebarNav"] { display: none; }
+/* Full-width container */
+.block-container {{
+    padding-left: 3rem !important;
+    padding-right: 3rem !important;
+    padding-top: 1.5rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 1200px;
+}}
 
-    /* Force full-width layout */
-    .block-container {
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
+/* White background + base text */
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {{
+    background-color: #ffffff !important;
+    color: #111111 !important;
+    font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}}
 
-    /* White background everywhere */
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
-        background-color: white !important;
-        color: black !important;
-    }
+/* Headings */
+h1, h2, h3, h4, h5, h6 {{
+    color: {PRIMARY_DARK} !important;
+    font-weight: 700 !important;
+}}
 
-    h1, h2, h3, h4, h5, h6 {
-        color: black !important;
-    }
+/* Section dividers */
+hr {{
+    border-top: 1px solid #EEEEEE !important;
+}}
 
+/* Buttons */
+.stButton>button {{
+    background-color: {PRIMARY_GREEN} !important;
+    color: #000000 !important;
+    border-radius: 999px !important;
+    padding: 0.6rem 1.8rem !important;
+    border: none !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}}
+.stButton>button:hover {{
+    background-color: #00C60A !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}}
+
+/* Radios + labels */
+.stRadio > label {{
+    font-weight: 600 !important;
+    color: #111111 !important;
+}}
+.stRadio div[role="radiogroup"] label {{
+    color: #111111 !important;
+    font-size: 1.02rem !important;
+}}
+
+/* Accent color for radio + slider */
+input[type="radio"], input[type="range"] {{
+    accent-color: {PRIMARY_GREEN};
+}}
+
+/* Inputs & select boxes */
+.stTextInput>div>div>input,
+.stSelectbox>div>div>div {{
+    border-radius: 0.6rem !important;
+    border: 1px solid #DDDDDD !important;
+}}
+.stSelectbox>label,
+.stTextInput>label {{
+    font-weight: 600 !important;
+    color: #222222 !important;
+    margin-bottom: 0.15rem !important;
+}}
+
+/* Sliders */
+.stSlider > div > div > div {{
+    color: #111111 !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
-
-
 # -------------------------------------------------------
-# CUSTOM CSS (Solar21 style)
+# LOGO (centered, visible)
 # -------------------------------------------------------
-logo_path = "solar21_logo.png"
+logo_path = Path(__file__).parent / "solar21_logo.png"
 
-st.markdown(
-    """
-    <div style="text-align:center; margin-top:20px; margin-bottom:20px;">
-        <img src="solar21_logo.png" width="300">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+if logo_path.exists():
+    col_l, col_c, col_r = st.columns([1, 2, 1])
+    with col_c:
+        st.image(str(logo_path), use_column_width=False, width=260)
+else:
+    # Fallback text if logo not found in the deployed folder
+    st.markdown(
+        f"<h2 style='text-align:center; color:{PRIMARY_DARK}; margin-top:0;'>Solar21 Evaluation Tool</h2>",
+        unsafe_allow_html=True,
+    )
 
 # -------------------------------------------------------
 # SESSION STATE INIT
@@ -104,9 +167,19 @@ def restart_button():
 # -------------------------------------------------------
 
 def page_lang():
-    st.title("Choose your language")
+    st.markdown(
+        "<h1 style='margin-top:1.5rem;'>Choose your language</h1>",
+        unsafe_allow_html=True,
+    )
 
-    lang = st.radio("", ["English"], index=0)
+    st.radio(
+        "",
+        ["English"],
+        index=0,
+        key="lang_choice"
+    )
+
+    st.markdown("")  # small spacing
 
     if st.button("Continue →"):
         goto("address_entry")
@@ -145,13 +218,13 @@ def page_address_entry():
             key=f"addr_{idx}"
         )
 
+        canton_list = ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL",
+                       "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"]
+
         entry["canton"] = st.selectbox(
             "Canton",
-            ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL",
-             "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
-            index=0 if entry["canton"] == "" else
-            ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL",
-             "BS","TG","SO","NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
+            canton_list,
+            index=0 if entry["canton"] == "" else canton_list.index(entry["canton"]),
             key=f"canton_{idx}"
         )
 
