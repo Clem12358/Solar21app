@@ -19,18 +19,17 @@ PRIMARY_DARK = "#000000"
 st.markdown(f"""
 <style>
 
-/* Force radio text to be fully black and opaque */
-.stRadio label {{
+/* --- GLOBAL TEXT COLOR OVERRIDES (dark theme → light UI) --- */
+:root {{
+    --text-color: #000000 !important;
+    --secondary-text-color: #333333 !important;
+}}
+
+/* Brutal fix: all text inside radios = black & fully opaque */
+.stRadio, .stRadio * {{
     color: #000000 !important;
     opacity: 1 !important;
     font-weight: 600 !important;
-}}
-
-/* THIS is the important one: inner span where Streamlit actually puts the text */
-.stRadio div[role="radiogroup"] label span {{
-    color: #000000 !important;
-    opacity: 1 !important;
-    font-size: 1.02rem !important;
 }}
 
 /* Hide sidebar */
