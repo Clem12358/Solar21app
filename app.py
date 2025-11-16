@@ -439,4 +439,5 @@ def render_block_b_step():
         st.markdown("---")
         col1, col2, col3 = st.columns(3)
         col1.metric("Annual Spend (CHF)", f"{annual_chf:,.0f}")
-        col2.metric("Self-consumption share", "n/a" if sc is None else f"{sc:
+        col2.metric("Self-consumption share", "n/a" if sc is None else f"{sc:.2f}")
+
