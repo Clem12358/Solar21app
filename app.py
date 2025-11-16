@@ -129,10 +129,16 @@ st.markdown("""
     }
     
     /* Gray out non-selected language buttons */
-    .stButton>button[disabled] {
-        background-color: #f0f0f0 !important;
+    .stButton>button[kind="secondary"] {
+        background-color: #f5f5f5 !important;
         color: #999999 !important;
-        opacity: 0.6;
+        opacity: 0.5 !important;
+        border: 2px solid #e0e0e0 !important;
+    }
+    
+    .stButton>button[kind="secondary"]:hover {
+        background-color: #f5f5f5 !important;
+        transform: none !important;
     }
 
     /* Sliders */
@@ -172,16 +178,16 @@ with col2:
     logo_loaded = False
     for path in possible_paths:
         if os.path.exists(path):
-            st.image(path, use_container_width=True)
+            st.image(path, width=200)  # Smaller logo size
             logo_loaded = True
             break
     
     if not logo_loaded:
         st.markdown(
             """
-            <div style="text-align:center; margin-bottom:40px;">
-                <h1 style="color: #1a1a1a; margin: 0; font-size: 2.5rem;">Solar21</h1>
-                <p style="color: #666; font-size: 1.1rem;">Evaluation Tool</p>
+            <div style="text-align:center; margin-bottom:20px;">
+                <h1 style="color: #1a1a1a; margin: 0; font-size: 2rem;">Solar21</h1>
+                <p style="color: #666; font-size: 0.9rem;">Evaluation Tool</p>
             </div>
             """,
             unsafe_allow_html=True
@@ -221,6 +227,7 @@ TEXT = {
     },
     "continue": {"en": "Continue →", "fr": "Continuer →", "de": "Weiter →"},
     "add_site": {"en": "+ Add another address", "fr": "+ Ajouter une adresse", "de": "+ Eine Adresse hinzufügen"},
+    "remove_site": {"en": "🗑️ Remove", "fr": "🗑️ Supprimer", "de": "🗑️ Entfernen"},
     "address_title": {
         "en": "Project Sites — Addresses",
         "fr": "Sites du projet — Adresses",
@@ -243,34 +250,64 @@ TEXT = {
         "de": "Standortbewertung"
     },
     "owner_type": {
-        "en": "Owner type",
-        "fr": "Type de propriétaire",
-        "de": "Eigentümertyp"
+        "en": "Who owns this site?",
+        "fr": "Qui est propriétaire de ce site ?",
+        "de": "Wer ist Eigentümer dieses Standorts?"
+    },
+    "owner_type_help": {
+        "en": "This helps us understand how easy it is for the owner to finance a solar project.",
+        "fr": "Cela nous aide à comprendre la facilité de financement d'un projet solaire pour le propriétaire.",
+        "de": "Dies hilft uns zu verstehen, wie einfach es für den Eigentümer ist, ein Solarprojekt zu finanzieren."
     },
     "esg": {
-        "en": "ESG visibility",
-        "fr": "Visibilité ESG",
-        "de": "ESG-Sichtbarkeit"
+        "en": "Is the owner visibly engaged in sustainability topics?",
+        "fr": "Le propriétaire est-il visiblement engagé dans la durabilité ?",
+        "de": "Ist der Eigentümer sichtbar im Nachhaltigkeitsbereich engagiert?"
+    },
+    "esg_help": {
+        "en": "This helps estimate how receptive they are to solar solutions.",
+        "fr": "Cela aide à estimer leur réceptivité aux solutions solaires.",
+        "de": "Dies hilft einzuschätzen, wie aufgeschlossen sie für Solarlösungen sind."
     },
     "daytime": {
-        "en": "Share of consumption between 08:00–18:00",
-        "fr": "Part de consommation entre 08h00–18h00",
-        "de": "Anteil des Verbrauchs zwischen 08:00–18:00"
+        "en": "What share of the site's electricity is used during daytime (08:00–18:00)?",
+        "fr": "Quelle part de l'électricité du site est utilisée en journée (08h00–18h00) ?",
+        "de": "Welcher Anteil des Stroms wird tagsüber (08:00–18:00) verbraucht?"
+    },
+    "daytime_help": {
+        "en": "Daytime consumption increases the amount of solar electricity the site can use directly, improving economic attractiveness. Choose your best estimate — it doesn't need to be perfect.",
+        "fr": "La consommation diurne augmente la part d'électricité solaire utilisée directement, améliorant l'attractivité économique. Choisissez votre meilleure estimation — elle n'a pas besoin d'être parfaite.",
+        "de": "Tagesverbrauch erhöht den Anteil an direkt genutztem Solarstrom und verbessert die Wirtschaftlichkeit. Wählen Sie Ihre beste Schätzung — sie muss nicht perfekt sein."
     },
     "spend": {
-        "en": "Annual electricity spend",
-        "fr": "Dépenses annuelles d'électricité",
-        "de": "Jährliche Stromkosten"
+        "en": "What is the site's annual electricity cost (CHF)?",
+        "fr": "Quel est le coût annuel d'électricité du site (CHF) ?",
+        "de": "Was sind die jährlichen Stromkosten des Standorts (CHF)?"
+    },
+    "spend_help": {
+        "en": "This indicates the financial importance of energy decisions and the potential for savings.",
+        "fr": "Cela indique l'importance financière des décisions énergétiques et le potentiel d'économies.",
+        "de": "Dies zeigt die finanzielle Bedeutung von Energieentscheidungen und das Einsparpotenzial."
     },
     "season": {
-        "en": "Seasonal variation",
-        "fr": "Variation saisonnière",
-        "de": "Saisonale Schwankung"
+        "en": "How stable is the site's electricity consumption throughout the year?",
+        "fr": "Quelle est la stabilité de la consommation électrique tout au long de l'année ?",
+        "de": "Wie stabil ist der Stromverbrauch des Standorts über das Jahr?"
+    },
+    "season_help": {
+        "en": "High seasonality makes it harder to match solar production with consumption.",
+        "fr": "Une forte saisonnalité rend plus difficile l'adéquation entre production solaire et consommation.",
+        "de": "Hohe Saisonalität erschwert die Anpassung von Solarproduktion und Verbrauch."
     },
     "loads": {
-        "en": "24/7 loads?",
-        "fr": "Charges 24/7 ?",
-        "de": "24/7-Betrieb?"
+        "en": "Does the site operate equipment that runs 24/7?",
+        "fr": "Le site exploite-t-il des équipements fonctionnant 24h/24 7j/7 ?",
+        "de": "Betreibt der Standort Geräte, die 24/7 laufen?"
+    },
+    "loads_help": {
+        "en": "Constant loads (cold rooms, servers, manufacturing lines) increase the share of solar energy that can be consumed directly.",
+        "fr": "Les charges constantes (chambres froides, serveurs, lignes de production) augmentent la part d'énergie solaire consommée directement.",
+        "de": "Konstante Lasten (Kühlräume, Server, Produktionslinien) erhöhen den Anteil direkt verbrauchter Solarenergie."
     },
     "results_title": {
         "en": "Final Results — Solar21 Evaluation",
@@ -306,29 +343,49 @@ def restart_button():
 def page_lang():
     st.markdown(f"<h2 style='text-align: center; color: #1a1a1a; font-size: 2rem; margin-bottom: 2rem;'>{TEXT['lang_title']['en']}</h2>", unsafe_allow_html=True)
 
+    # Initialize selected language if not set
+    if "selected_lang_temp" not in st.session_state:
+        st.session_state["selected_lang_temp"] = None
+
     # Create language cards
     col1, col2, col3 = st.columns([1, 3, 1])
     
     with col2:
         # English
-        selected_class = "selected" if st.session_state.get("language") == "en" else ""
-        if st.button("🇬🇧 English", key="lang_en", use_container_width=True):
+        button_type = "primary" if st.session_state["selected_lang_temp"] == "en" else "secondary"
+        if st.button("🇬🇧 English", key="lang_en", use_container_width=True, type=button_type):
             st.session_state["language"] = "en"
+            st.session_state["selected_lang_temp"] = "en"
+            st.rerun()
         
         # French
-        selected_class = "selected" if st.session_state.get("language") == "fr" else ""
-        if st.button("🇫🇷 Français", key="lang_fr", use_container_width=True):
+        button_type = "primary" if st.session_state["selected_lang_temp"] == "fr" else "secondary"
+        if st.button("🇫🇷 Français", key="lang_fr", use_container_width=True, type=button_type):
             st.session_state["language"] = "fr"
+            st.session_state["selected_lang_temp"] = "fr"
+            st.rerun()
         
         # German
-        selected_class = "selected" if st.session_state.get("language") == "de" else ""
-        if st.button("🇩🇪 Deutsch", key="lang_de", use_container_width=True):
+        button_type = "primary" if st.session_state["selected_lang_temp"] == "de" else "secondary"
+        if st.button("🇩🇪 Deutsch", key="lang_de", use_container_width=True, type=button_type):
             st.session_state["language"] = "de"
+            st.session_state["selected_lang_temp"] = "de"
+            st.rerun()
 
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button(TEXT["continue"][st.session_state["language"]], key="continue_lang", use_container_width=True):
-            goto("address_entry")
+        # Show selected language with checkmark
+        if st.session_state["selected_lang_temp"]:
+            lang_names = {"en": "English", "fr": "Français", "de": "Deutsch"}
+            st.success(f"✓ Selected language: **{lang_names[st.session_state['selected_lang_temp']]}**")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Only enable continue if a language is selected
+        if st.session_state["selected_lang_temp"]:
+            if st.button(TEXT["continue"][st.session_state["language"]], key="continue_lang", use_container_width=True):
+                goto("address_entry")
+                st.rerun()
 
 # -------------------------------------------------------
 # PAGE 2 — ENTER ADDRESSES
@@ -340,14 +397,17 @@ def page_address_entry():
     st.title(TEXT["address_title"][L])
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button(TEXT["add_site"][L]):
-        st.session_state["addresses"].append({
-            "address": "",
-            "canton": "",
-            "roof_area": None,
-            "roof_pitch": None,
-            "roof_orientation": None,
-        })
+    col_add, col_space = st.columns([1, 3])
+    with col_add:
+        if st.button(TEXT["add_site"][L]):
+            st.session_state["addresses"].append({
+                "address": "",
+                "canton": "",
+                "roof_area": None,
+                "roof_pitch": None,
+                "roof_orientation": None,
+            })
+            st.rerun()
 
     if len(st.session_state["addresses"]) == 0:
         st.session_state["addresses"].append({
@@ -359,7 +419,15 @@ def page_address_entry():
         })
 
     for idx, entry in enumerate(st.session_state["addresses"]):
-        st.markdown(f"### 📍 {TEXT['full_address'][L]} {idx+1}")
+        col_title, col_remove = st.columns([4, 1])
+        with col_title:
+            st.markdown(f"### 📍 {TEXT['full_address'][L]} {idx+1}")
+        with col_remove:
+            if len(st.session_state["addresses"]) > 1:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button(TEXT["remove_site"][L], key=f"remove_{idx}"):
+                    st.session_state["addresses"].pop(idx)
+                    st.rerun()
 
         entry["address"] = st.text_input(
             TEXT["full_address"][L],
@@ -382,9 +450,17 @@ def page_address_entry():
 
         st.markdown("---")
 
+    # Create a placeholder for the loading message
+    status_placeholder = st.empty()
+    
     if st.button(TEXT["save_continue"][L], use_container_width=True):
+        # Show loading status
+        with status_placeholder.container():
+            st.info("🔄 Fetching rooftop data, please wait...")
+        
         # Fetch rooftop data for all addresses before continuing
-        with st.spinner("Fetching rooftop data..."):
+        all_success = True
+        with st.spinner(""):
             for idx, entry in enumerate(st.session_state["addresses"]):
                 if entry["address"] and entry["canton"] and not entry["roof_area"]:
                     data = get_sonnendach_info(entry["address"])
@@ -392,7 +468,21 @@ def page_address_entry():
                         entry["roof_area"] = data.get("roof_area")
                         entry["roof_pitch"] = data.get("pitch")
                         entry["roof_orientation"] = data.get("orientation")
-        goto("questions")
+                    else:
+                        all_success = False
+        
+        if all_success:
+            status_placeholder.success("✅ Data loaded successfully! Proceeding...")
+            import time
+            time.sleep(1)
+            goto("questions")
+            st.rerun()
+        else:
+            status_placeholder.warning("⚠️ Some rooftop data could not be fetched. You can continue anyway.")
+            import time
+            time.sleep(2)
+            goto("questions")
+            st.rerun()
 
 # -------------------------------------------------------
 # PAGE 3 — QUESTIONS (ONE PAGE PER ADDRESS)
@@ -411,28 +501,37 @@ def page_questions():
 
     # OWNER TYPE
     st.markdown(f"### {TEXT['owner_type'][L]}")
+    st.caption(TEXT["owner_type_help"][L])
     owner_type = st.radio(
         "",
         [
-            "3 — Public / institutional",
-            "2 — Commercial",
-            "1 — Private / SME"
+            "Public entity or large institutional owner — Hospitals, municipalities, cantonal buildings, universities, major corporates. Typically low cost of capital and stable approval processes.",
+            "Standard commercial owner — Regular private companies, logistics firms, retail centers, property companies.",
+            "Private individual or small SME — Smaller budgets, higher financing constraints, usually slower decision cycles."
         ],
         key=prefix + "owner",
         label_visibility="collapsed"
     )
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # ESG
     st.markdown(f"### {TEXT['esg'][L]}")
+    st.caption(TEXT["esg_help"][L])
     esg = st.radio(
         "",
-        ["Yes", "IDK", "No"],
+        [
+            "Yes — sustainability is clearly part of their identity (Website, annual reports, labels, certifications, public commitments)",
+            "Not sure — no clear signal (No obvious information available)",
+            "No — sustainability is not a visible priority (No ESG communication, purely cost-driven decision-making)"
+        ],
         key=prefix + "esg",
         label_visibility="collapsed"
     )
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # DAYTIME
     st.markdown(f"### {TEXT['daytime'][L]}")
+    st.caption(TEXT["daytime_help"][L])
     daytime = st.slider(
         "",
         0, 100, 60,
@@ -440,30 +539,43 @@ def page_questions():
         label_visibility="collapsed"
     )
     st.markdown(f"**{daytime}%**")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # SPEND
     st.markdown(f"### {TEXT['spend'][L]}")
+    st.caption(TEXT["spend_help"][L])
     spend = st.radio(
         "",
-        ["<100k", "100–300k", "300–800k", ">800k"],
+        ["Below 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Above 800k CHF"],
         key=prefix + "spend",
         label_visibility="collapsed"
     )
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # SEASON
     st.markdown(f"### {TEXT['season'][L]}")
+    st.caption(TEXT["season_help"][L])
     season = st.radio(
         "",
-        ["Low (±10%)", "Moderate (±10–25%)", "High (>25%)"],
+        [
+            "Low seasonal variation (±10%) — Consumption stays stable across the year",
+            "Moderate variation (±10–25%) — Some seasonal differences (e.g., cooling or heating loads)",
+            "High variation (>25%) — Strong seasonality, big differences between summer and winter"
+        ],
         key=prefix + "season",
         label_visibility="collapsed"
     )
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # 24/7
     st.markdown(f"### {TEXT['loads'][L]}")
+    st.caption(TEXT["loads_help"][L])
     loads = st.radio(
         "",
-        ["Yes", "No"],
+        [
+            "Yes — important 24/7 loads (Cold storage, server rooms, industrial baseload, data centers)",
+            "No — mainly daytime or irregular loads"
+        ],
         key=prefix + "247",
         label_visibility="collapsed"
     )
@@ -485,12 +597,15 @@ def page_questions():
     if idx > 0:
         if c1.button("← Back", use_container_width=True):
             st.session_state["current_index"] -= 1
+            st.rerun()
 
     if c2.button(TEXT["continue"][L], use_container_width=True):
         if idx < len(st.session_state["addresses"]) - 1:
             st.session_state["current_index"] += 1
+            st.rerun()
         else:
             goto("results")
+            st.rerun()
 
 # -------------------------------------------------------
 # PAGE 4 — RESULTS
