@@ -10,50 +10,107 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------
-# GLOBAL CSS (white background, hide sidebar)
+# GLOBAL CSS (improved styling)
 # -------------------------------------------------------
 st.markdown("""
 <style>
-
     /* Hide Streamlit sidebar completely */
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="stSidebarNav"] { display: none !important; }
 
-    /* White background everywhere */
+    /* Clean white background */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
-        background: white !important;
-        color: black !important;
+        background: #ffffff !important;
     }
 
     .block-container {
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
+        padding: 3rem 2rem !important;
+        max-width: 1200px;
+        margin: 0 auto;
     }
 
-    h1, h2, h3, h4, h5 {
-        color: black !important;
+    /* Text colors - ensure visibility */
+    h1, h2, h3, h4, h5, h6, p, span, div, label {
+        color: #1a1a1a !important;
+    }
+
+    /* Radio buttons - make them visible */
+    [data-testid="stRadio"] label {
+        color: #1a1a1a !important;
+    }
+    
+    [data-testid="stRadio"] > div {
+        color: #1a1a1a !important;
     }
 
     /* Solar21 green buttons */
     .stButton>button {
         background-color: #00FF40 !important;
-        color: black !important;
+        color: #000000 !important;
         font-weight: 600 !important;
-        border-radius: 8px;
-        border: none;
-        padding: 0.6rem 1.2rem;
+        border-radius: 8px !important;
+        border: none !important;
+        padding: 0.75rem 1.5rem !important;
+        font-size: 1rem !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+
+    .stButton>button:hover {
+        background-color: #00DD38 !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Text inputs */
+    input[type="text"] {
+        border: 2px solid #e0e0e0 !important;
+        border-radius: 6px !important;
+        padding: 0.5rem !important;
+        color: #1a1a1a !important;
+        background-color: #ffffff !important;
+    }
+
+    input[type="text"]:focus {
+        border-color: #00FF40 !important;
+        box-shadow: 0 0 0 2px rgba(0,255,64,0.1) !important;
+    }
+
+    /* Select boxes */
+    [data-baseweb="select"] {
+        border: 2px solid #e0e0e0 !important;
+        border-radius: 6px !important;
+    }
+
+    /* Sliders */
+    .stSlider {
+        padding: 1rem 0 !important;
+    }
+
+    /* Success/Error messages */
+    .stSuccess, .stError {
+        padding: 1rem !important;
+        border-radius: 6px !important;
+    }
+
+    /* Dividers */
+    hr {
+        margin: 2rem 0 !important;
+        border-color: #e0e0e0 !important;
     }
 
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# LOGO (centered)
+# LOGO (centered) - Using emoji as placeholder
 # -------------------------------------------------------
 st.markdown(
     """
-    <div style="text-align:center; margin-top:20px; margin-bottom:20px;">
-        <img src="solar21_logo.png" width="300">
+    <div style="text-align:center; margin-bottom:40px;">
+        <div style="font-size: 80px; margin-bottom: 10px;">☀️</div>
+        <h1 style="color: #1a1a1a; margin: 0; font-size: 2.5rem;">Solar21</h1>
+        <p style="color: #666; font-size: 1.1rem;">Evaluation Tool</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -175,23 +232,30 @@ def restart_button():
 # -------------------------------------------------------
 
 def page_lang():
-    st.title(TEXT["lang_title"]["en"])
+    st.markdown(f"<h2 style='text-align: center; color: #1a1a1a;'>{TEXT['lang_title']['en']}</h2>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    lang = st.radio(
-        "",
-        ["English", "Français", "Deutsch"],
-        index=0
-    )
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        lang = st.radio(
+            "",
+            ["🇬🇧 English", "🇫🇷 Français", "🇩🇪 Deutsch"],
+            index=0,
+            label_visibility="collapsed"
+        )
 
-    if lang == "English":
-        st.session_state["language"] = "en"
-    elif lang == "Français":
-        st.session_state["language"] = "fr"
-    else:
-        st.session_state["language"] = "de"
+        if lang == "🇬🇧 English":
+            st.session_state["language"] = "en"
+        elif lang == "🇫🇷 Français":
+            st.session_state["language"] = "fr"
+        else:
+            st.session_state["language"] = "de"
 
-    if st.button(TEXT["continue"][st.session_state["language"]]):
-        goto("address_entry")
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button(TEXT["continue"][st.session_state["language"]], use_container_width=True):
+            goto("address_entry")
 
 # -------------------------------------------------------
 # PAGE 2 — ENTER ADDRESSES
@@ -201,6 +265,7 @@ def page_address_entry():
     L = st.session_state["language"]
 
     st.title(TEXT["address_title"][L])
+    st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button(TEXT["add_site"][L]):
         st.session_state["addresses"].append({
@@ -221,7 +286,7 @@ def page_address_entry():
         })
 
     for idx, entry in enumerate(st.session_state["addresses"]):
-        st.markdown(f"### {TEXT['full_address'][L]} {idx+1}")
+        st.markdown(f"### 📍 {TEXT['full_address'][L]} {idx+1}")
 
         entry["address"] = st.text_input(
             TEXT["full_address"][L],
@@ -229,33 +294,38 @@ def page_address_entry():
             key=f"addr_{idx}"
         )
 
-        entry["canton"] = st.selectbox(
-            "Canton",
-            ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL",
-             "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
-            index=0 if entry["canton"] == "" else
-            ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL","BS","TG","SO",
-             "NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
-            key=f"canton_{idx}"
-        )
-
-        if st.button(f"{TEXT['fetch_data'][L]} ({idx+1})"):
-            with st.spinner("Fetching data..."):
-                data = get_sonnendach_info(entry["address"])
-                if data:
-                    entry["roof_area"] = data.get("roof_area")
-                    entry["roof_pitch"] = data.get("pitch")
-                    entry["roof_orientation"] = data.get("orientation")
-                    st.success("OK")
-                else:
-                    st.error("Could not fetch rooftop data.")
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            entry["canton"] = st.selectbox(
+                "Canton",
+                ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL",
+                 "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
+                index=0 if entry["canton"] == "" else
+                ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL","BS","TG","SO",
+                 "NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
+                key=f"canton_{idx}"
+            )
+        
+        with col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button(f"🔍 {TEXT['fetch_data'][L]}", key=f"fetch_{idx}"):
+                with st.spinner("Fetching data..."):
+                    data = get_sonnendach_info(entry["address"])
+                    if data:
+                        entry["roof_area"] = data.get("roof_area")
+                        entry["roof_pitch"] = data.get("pitch")
+                        entry["roof_orientation"] = data.get("orientation")
+                        st.success("✓ Data loaded")
+                    else:
+                        st.error("Could not fetch rooftop data.")
 
         if entry["roof_area"]:
-            st.write(f"Rooftop area: **{entry['roof_area']} m²**")
+            st.info(f"🏠 Rooftop area: **{entry['roof_area']} m²**")
 
         st.markdown("---")
 
-    if st.button(TEXT["save_continue"][L]):
+    if st.button(TEXT["save_continue"][L], use_container_width=True):
         goto("questions")
 
 # -------------------------------------------------------
@@ -267,54 +337,69 @@ def page_questions():
     idx = st.session_state["current_index"]
     site = st.session_state["addresses"][idx]
 
-    st.title(f"{TEXT['questions_title'][L]} — {site['address']} ({site['canton']})")
+    st.title(f"{TEXT['questions_title'][L]}")
+    st.markdown(f"**📍 {site['address']} ({site['canton']})**")
+    st.markdown("---")
 
     prefix = f"a{idx}_"
 
     # OWNER TYPE
+    st.markdown(f"### {TEXT['owner_type'][L]}")
     owner_type = st.radio(
-        "### " + TEXT["owner_type"][L],
+        "",
         [
             "3 — Public / institutional",
             "2 — Commercial",
             "1 — Private / SME"
         ],
-        key=prefix + "owner"
+        key=prefix + "owner",
+        label_visibility="collapsed"
     )
 
     # ESG
+    st.markdown(f"### {TEXT['esg'][L]}")
     esg = st.radio(
-        "### " + TEXT["esg"][L],
+        "",
         ["Yes", "IDK", "No"],
-        key=prefix + "esg"
+        key=prefix + "esg",
+        label_visibility="collapsed"
     )
 
     # DAYTIME
+    st.markdown(f"### {TEXT['daytime'][L]}")
     daytime = st.slider(
-        "### " + TEXT["daytime"][L],
+        "",
         0, 100, 60,
-        key=prefix + "daytime"
+        key=prefix + "daytime",
+        label_visibility="collapsed"
     )
+    st.markdown(f"**{daytime}%**")
 
     # SPEND
+    st.markdown(f"### {TEXT['spend'][L]}")
     spend = st.radio(
-        "### " + TEXT["spend"][L],
+        "",
         ["<100k", "100–300k", "300–800k", ">800k"],
-        key=prefix + "spend"
+        key=prefix + "spend",
+        label_visibility="collapsed"
     )
 
     # SEASON
+    st.markdown(f"### {TEXT['season'][L]}")
     season = st.radio(
-        "### " + TEXT["season"][L],
+        "",
         ["Low (±10%)", "Moderate (±10–25%)", "High (>25%)"],
-        key=prefix + "season"
+        key=prefix + "season",
+        label_visibility="collapsed"
     )
 
     # 24/7
+    st.markdown(f"### {TEXT['loads'][L]}")
     loads = st.radio(
-        "### " + TEXT["loads"][L],
+        "",
         ["Yes", "No"],
-        key=prefix + "247"
+        key=prefix + "247",
+        label_visibility="collapsed"
     )
 
     # Save all
@@ -332,10 +417,10 @@ def page_questions():
     c1, c2 = st.columns(2)
 
     if idx > 0:
-        if c1.button("← Back"):
+        if c1.button("← Back", use_container_width=True):
             st.session_state["current_index"] -= 1
 
-    if c2.button(TEXT["continue"][L]):
+    if c2.button(TEXT["continue"][L], use_container_width=True):
         if idx < len(st.session_state["addresses"]) - 1:
             st.session_state["current_index"] += 1
         else:
@@ -348,14 +433,26 @@ def page_questions():
 def page_results():
     L = st.session_state["language"]
     st.title(TEXT["results_title"][L])
+    st.markdown("---")
 
     for idx, site in enumerate(st.session_state["addresses"]):
         ans = st.session_state["answers"][idx]
-        st.markdown(f"## {site['address']} ({site['canton']})")
-        st.write(f"**A1 – Roof score:** {ans['roof_score']}")
-        st.write(f"**A2 – Owner type:** {ans['owner_type']}")
-        st.write(f"**A3 – ESG:** {ans['esg']}")
-        st.write(f"**Electricity spend:** {ans['spend']}")
+        
+        st.markdown(f"## 📍 {site['address']} ({site['canton']})")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("Roof Score", ans['roof_score'] or "N/A")
+            st.write(f"**Owner type:** {ans['owner_type']}")
+            st.write(f"**ESG visibility:** {ans['esg']}")
+        
+        with col2:
+            st.write(f"**Electricity spend:** {ans['spend']}")
+            st.write(f"**Daytime consumption:** {ans['daytime']}%")
+            st.write(f"**Seasonal variation:** {ans['season']}")
+            st.write(f"**24/7 loads:** {ans['loads']}")
+        
         st.markdown("---")
 
     restart_button()
