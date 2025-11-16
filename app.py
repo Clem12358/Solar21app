@@ -1,377 +1,256 @@
 import streamlit as st
-import pandas as pd
+from modules.sonnendach import get_sonnendach_info
+from modules.geocoder import geocode_address
 
-# ----------------------------------------------------
-# PAGE CONFIG
-# ----------------------------------------------------
-st.set_page_config(
-    page_title="Solar21 Pre-Check",
-    page_icon="🔆",
-    layout="wide"
-)
+st.set_page_config(layout="wide", page_title="Solar21 Evaluation Tool")
 
-# ----------------------------------------------------
-# GLOBAL STYLE
-# ----------------------------------------------------
-st.markdown(
-    """
-    <style>
-    [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="stSidebarNav"] { display: none !important; }
+# -----------------------------
+# Helpers
+# -----------------------------
 
-    main[data-testid="stAppViewContainer"] {
-        margin-left: 0 !important;
-        padding-left: 2rem !important;
+def goto(page):
+    st.session_state["page"] = page
+
+def init_state():
+    defaults = {
+        "page": "lang",       # first page
+        "addresses": [],
+        "current_index": 0,
+        "answers": {},
     }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
-    header[data-testid="stHeader"] {
-        margin-left: 0 !important;
-    }
+init_state()
 
-    .stPageLink { display: none !important; }
+# Compute A1 roof score silently
+def compute_roof_score(roof_area):
+    if roof_area is None:
+        return None
+    if roof_area > 1000:
+        return 3
+    elif roof_area > 500:
+        return 2
+    else:
+        return 1
 
-    .progress-wrapper {
-        width: 100%;
-        background-color: #e0e0e0;
-        height: 6px;
-        border-radius: 4px;
-        margin-bottom: 1.5rem;
-    }
-    .progress-bar {
-        height: 6px;
-        border-radius: 4px;
-        background-color: #0072ff;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# -----------------------------
+# UI components
+# -----------------------------
 
-# ----------------------------------------------------
-# SESSION STATE DEFAULTS
-# ----------------------------------------------------
-if "language" not in st.session_state:
-    st.session_state.language = None
+def back_button(target):
+    st.markdown("---")
+    if st.button("← Back"):
+        goto(target)
 
-if "step" not in st.session_state:
-    st.session_state.step = "language"
+def restart_button():
+    st.markdown("---")
+    if st.button("Start again"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        init_state()
 
-# ----------------------------------------------------
-# NAVIGATION BUTTONS
-# ----------------------------------------------------
-def nav_buttons(back_step=None, next_step=None, next_label="Continue →"):
-    col1, col2 = st.columns([1,1])
-    if back_step:
-        if col1.button("← Back"):
-            st.session_state.step = back_step
-            st.rerun()
+# -----------------------------
+# Page: Language choice
+# -----------------------------
 
-    if next_step:
-        if col2.button(next_label, type="primary"):
-            st.session_state.step = next_step
-            st.rerun()
+def page_lang():
+    st.title("Choose your language")
+    lang = st.radio("", ["English"], index=0)
+    if st.button("Continue"):
+        goto("address_entry")
 
+# -----------------------------
+# Page: Address entry
+# -----------------------------
 
-# ----------------------------------------------------
-# STEP 1: LANGUAGE SELECTION
-# ----------------------------------------------------
-def render_language_step():
+def page_address_entry():
+    st.title("Project sites — enter addresses")
 
-    st.title("Solar21 Pre-Check")
+    if st.button("+ Add another address"):
+        st.session_state["addresses"].append({
+            "address": "",
+            "canton": "",
+            "roof_area": None,
+            "roof_pitch": None,
+            "roof_orientation": None
+        })
 
-    st.subheader("Choose your language")
+    # If no addresses yet, create the first
+    if len(st.session_state["addresses"]) == 0:
+        st.session_state["addresses"].append({
+            "address": "",
+            "canton": "",
+            "roof_area": None,
+            "roof_pitch": None,
+            "roof_orientation": None
+        })
 
-    col1, col2, col3 = st.columns(3)
-    if col1.button("🇬🇧 English", use_container_width=True):
-        st.session_state.language = "en"
-        st.session_state.step = "welcome"
-        st.rerun()
+    for idx, entry in enumerate(st.session_state["addresses"]):
+        st.markdown(f"### Address {idx+1}")
 
-    if col2.button("🇫🇷 Français", use_container_width=True):
-        st.session_state.language = "fr"
-        st.session_state.step = "welcome"
-        st.rerun()
+        entry["address"] = st.text_input(
+            f"Enter the full address for site {idx+1}",
+            value=entry["address"],
+            key=f"addr_{idx}"
+        )
 
-    if col3.button("🇩🇪 Deutsch", use_container_width=True):
-        st.session_state.language = "de"
-        st.session_state.step = "welcome"
-        st.rerun()
+        entry["canton"] = st.selectbox(
+            "Select canton",
+            ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL", "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
+            index=0 if entry["canton"] == "" else ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL","BS","TG","SO","NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
+            key=f"canton_{idx}"
+        )
 
+        if st.button(f"Fetch rooftop data for address {idx+1}"):
+            with st.spinner("Fetching rooftop suitability…"):
+                result = get_sonnendach_info(entry["address"])
+                if result:
+                    entry["roof_area"] = result.get("roof_area")
+                    entry["roof_pitch"] = result.get("pitch")
+                    entry["roof_orientation"] = result.get("orientation")
+                else:
+                    st.error("Could not fetch data for this address.")
 
-# ----------------------------------------------------
-# STEP 2: WELCOME PAGE
-# ----------------------------------------------------
-def render_welcome_step():
-    lang = st.session_state.get("language", "en")
+        if entry["roof_area"] is not None:
+            st.success(f"Rooftop data loaded: {entry['roof_area']} m²")
 
-    TEXT = {
-        "en": {
-            "title": "Welcome to the Solar21 Partner Pre-Check",
-            "text": "Evaluate in **under two minutes** whether your client’s building fits Solar21’s profile.",
-            "next": "Next →",
-            "back": "← Back",
-        },
-        "fr": {
-            "title": "Bienvenue sur le pré-check partenaire Solar21",
-            "text": "Évaluez en **moins de deux minutes** si le bâtiment de votre client correspond aux critères Solar21.",
-            "next": "Suivant →",
-            "back": "← Retour",
-        },
-        "de": {
-            "title": "Willkommen zum Solar21 Partner Pre-Check",
-            "text": "Beurteilen Sie in **unter zwei Minuten**, ob das Gebäude Ihres Kunden geeignet ist.",
-            "next": "Weiter →",
-            "back": "← Zurück",
-        },
-    }
+        st.markdown("---")
 
-    st.title(TEXT[lang]["title"])
-    st.write(TEXT[lang]["text"])
-    st.write("")
+    if st.button("Save & continue →"):
+        # Validate
+        for e in st.session_state["addresses"]:
+            if e["address"].strip() == "" or e["canton"].strip() == "":
+                st.error("Each address must have an address and a canton.")
+                return
+        st.session_state["current_index"] = 0
+        goto("questions")
 
-    nav_buttons(back_step="language", next_step="addresses", next_label=TEXT[lang]["next"])
+    back_button("lang")
 
+# -----------------------------
+# Page: Full question page for each address
+# -----------------------------
 
-# ----------------------------------------------------
-# STEP 3: ADDRESS INPUT + USER CHOOSES CANTON
-# ----------------------------------------------------
-def render_addresses_step():
-    st.title("Client Addresses")
+def page_questions():
+    idx = st.session_state["current_index"]
+    addr_data = st.session_state["addresses"][idx]
 
-    if "addresses" not in st.session_state:
-        st.session_state["addresses"] = []
-    if "cantons" not in st.session_state:
-        st.session_state["cantons"] = {}
+    address = addr_data["address"]
+    canton = addr_data["canton"]
+    key_prefix = f"addr_{idx}"
 
-    num_addresses = st.number_input(
-        "How many addresses do you want to enter?",
-        min_value=1,
-        max_value=20,
-        value=max(1, len(st.session_state["addresses"])),
-        step=1,
+    st.title(f"{address} ({canton})")
+
+    st.markdown("## Owner characteristics")
+
+    # A2 — Owner category
+    owner_type = st.radio(
+        "**What type of owner is this?**  
+This affects investment decisions and deal structure.",
+        [
+            "3 — Public or large institutional owner (very low cost of capital)",
+            "2 — Standard commercial owner",
+            "1 — Private individual / SME (higher capital constraints)"
+        ],
+        key=key_prefix + "_owner"
     )
 
-    addresses = st.session_state["addresses"]
-    if len(addresses) < num_addresses:
-        addresses += [""] * (num_addresses - len(addresses))
-    else:
-        addresses = addresses[:num_addresses]
-    st.session_state["addresses"] = addresses
+    # A3 — ESG
+    esg = st.radio(
+        "**Is the owner visibly engaged in sustainability topics?**  
+This can strengthen the case for on-site solar adoption.",
+        ["Yes", "IDK", "No"],
+        key=key_prefix + "_esg"
+    )
 
-    CANTON_LIST = [
-        "Zurich", "Bern", "Lucerne", "Uri", "Schwyz", "Obwalden", "Nidwalden", "Glarus", "Zug",
-        "Fribourg", "Solothurn", "Basel-Stadt", "Basel-Landschaft", "Schaffhausen", "Appenzell Ausserrhoden",
-        "Appenzell Innerrhoden", "St. Gallen", "Graubünden", "Aargau", "Thurgau", "Ticino",
-        "Vaud", "Valais", "Neuchâtel", "Geneva", "Jura"
-    ]
+    st.markdown("## Consumption profile")
 
-    with st.form("address_form"):
-        for i in range(num_addresses):
-            addr = st.text_input(f"Address {i+1}", addresses[i], key=f"addr_{i}")
-            st.session_state["addresses"][i] = addr
+    # B1 — Daytime %
+    daytime = st.slider(
+        "**Share of electricity consumed during daytime (approx.)**  
+Higher daytime consumption increases the value of on-site solar.",
+        0, 100, 60,
+        key=key_prefix + "_daytime"
+    )
 
-            st.session_state["cantons"][addr] = st.selectbox(
-                f"Canton for {addr or 'Address'}",
-                CANTON_LIST,
-                key=f"canton_{i}",
-            )
+    # B2 — Spend
+    spend = st.radio(
+        "**What is the site's annual electricity spend?**  
+Estimate the total yearly cost (CHF).",
+        ["<100k", "100–300k", "300–800k", ">800k"],
+        key=key_prefix + "_spend"
+    )
 
-        submitted = st.form_submit_button("Save and continue →")
+    # B3 — Seasonality
+    season = st.radio(
+        "**How seasonal is the load profile?**  
+High seasonality reduces the share of solar that can be consumed on-site.",
+        ["Low (±10%)", "Moderate (±10–25%)", "High (>25%)"],
+        key=key_prefix + "_season"
+    )
 
-    if submitted:
-        valid_addresses = [a for a in st.session_state["addresses"] if a.strip()]
-        st.session_state["passed_addresses"] = [
-            {"address": a, "canton": st.session_state["cantons"][a]}
-            for a in valid_addresses
-        ]
-        st.session_state.step = "block_a"
-        st.rerun()
+    # B4 — 24/7 loads
+    loads = st.radio(
+        "**Does the site have important 24/7 loads (servers, cold storage, etc.)?**",
+        ["Yes", "No"],
+        key=key_prefix + "_247"
+    )
 
-    nav_buttons(back_step="welcome")
+    st.markdown("---")
 
-
-# ----------------------------------------------------
-# STEP 4: BLOCK A — ROI / OWNER QUESTIONS
-# ----------------------------------------------------
-def render_block_a_step():
-    st.title("Block A — Owner ROI & Impact (40%)")
-
-    passed = st.session_state.get("passed_addresses", [])
-
-    st.subheader("A1 — Roof scale (automatic)")
-    st.write("The optimal roof size for Solar21 is > 1000 m².")
-
-    # For demo, random placeholder (in real app you use Sonnendach scraping)
-    roof_areas = [3000] * len(passed)
-    avg_area = sum(roof_areas) / len(roof_areas)
-    A1_score = 3 if avg_area >= 3000 else (2 if avg_area >= 1000 else 1)
-    st.info(f"Avg roof area: {avg_area:.1f} m² → Score {A1_score}")
-
-    st.session_state["A1_scores"] = {p["address"]: A1_score for p in passed}
-
-    st.write("")
-
-    st.subheader("A2 — Owner category (WACC proxy)")
-    st.write("Choose **the type of owner**. This affects required returns and deal feasibility.")
-
-    A2_scores = {}
-    for p in passed:
-        addr = p["address"]
-        choice = st.radio(
-            f"Owner type for {addr}",
-            [
-                "3 — Public, institutional, very low cost of capital",
-                "2 — Standard commercial owner",
-                "1 — Private individual / SME with high capital constraints"
-            ],
-            key=f"A2_{addr}"
-        )
-        A2_scores[addr] = int(choice[0])
-    st.session_state["A2_scores"] = A2_scores
-
-    st.write("")
-
-    st.subheader("A3 — ESG visibility")
-    st.write("Is the owner **actively interested** in sustainability benefits?")
-
-    map_esg = {"Yes": 3, "IDK": 2, "No": 1}
-    A3_scores = {}
-    for p in passed:
-        addr = p["address"]
-        ch = st.radio(f"ESG relevance for {addr}", ["Yes", "IDK", "No"], key=f"A3_{addr}")
-        A3_scores[addr] = map_esg[ch]
-    st.session_state["A3_scores"] = A3_scores
-
-    nav_buttons(back_step="addresses", next_step="block_b")
-
-
-# ----------------------------------------------------
-# STEP 5: BLOCK B — CONSUMPTION / FINANCIAL
-# ----------------------------------------------------
-def render_block_b_step():
-    st.title("Block B — Consumption Profile & Financial Attractiveness")
-
-    passed = st.session_state.get("passed_addresses", [])
-    if "block_b_results" not in st.session_state:
-        st.session_state["block_b_results"] = {}
-
-    def midpoint(bucket):
-        return {
-            "< 100k": 50_000,
-            "100–300k": 200_000,
-            "300–800k": 550_000,
-            "> 800k": 900_000,
-        }.get(bucket, 0)
-
-    ELECTRICITY_PRICES = {
-        "Vaud": 0.3226, "Geneva": 0.2422, "St. Gallen": 0.2772,
-        "Zurich": 0.2239, "Bern": 0.2550, "Ticino": 0.2852
+    # Save answers in a dict
+    st.session_state["answers"][idx] = {
+        "owner_type": owner_type,
+        "esg": esg,
+        "daytime": daytime,
+        "spend": spend,
+        "season": season,
+        "loads": loads,
+        "roof_score": compute_roof_score(addr_data["roof_area"])
     }
 
-    for i, site in enumerate(passed):
-        addr = site["address"]
-        canton = site["canton"]
+    # Navigation
+    cols = st.columns(2)
+    if idx > 0:
+        if cols[0].button("← Back"):
+            st.session_state["current_index"] -= 1
 
-        st.subheader(f"🏢 {addr}")
+    if cols[1].button("Continue →"):
+        if idx < len(st.session_state["addresses"]) - 1:
+            st.session_state["current_index"] += 1
+        else:
+            goto("results")
 
-        # Q1 daytime %
-        daytime = st.slider(
-            f"Typical share of consumption during weekdays 08:00–18:00 at {addr}",
-            0, 100, 60, 5, key=f"daytime_{i}"
-        )
-        daytime_frac = daytime / 100
+# -----------------------------
+# Page: Final results
+# -----------------------------
 
-        # Q2 annual spend
-        spend = st.radio(
-            f"Annual electricity bill for {addr}",
-            ["< 100k", "100–300k", "300–800k", "> 800k"],
-            key=f"spend_{i}"
-        )
-        annual_chf = midpoint(spend)
-
-        # Q3 seasonality
-        season = st.radio(
-            f"Seasonality of electricity usage at {addr}",
-            ["Low (±10%)", "Moderate (±10–25%)", "High (±25%)"],
-            key=f"season_{i}"
-        )
-
-        # Q4 24/7 loads
-        loads247 = st.radio(
-            f"Does {addr} have stable 24/7 loads?",
-            ["Yes", "No"],
-            key=f"load247_{i}"
-        )
-
-        # Compute
-        price = ELECTRICITY_PRICES.get(canton, None)
-        annual_kwh = annual_chf / price if price else None
-        pv100 = 550_000  # placeholder
-        sc = min(1, annual_kwh / pv100) if annual_kwh and pv100 else None
-        imports = daytime_frac * annual_chf * (1 - sc) + (1 - daytime_frac) * annual_chf if sc is not None else None
-
-        st.markdown("---")
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric("Annual spend (CHF)", f"{annual_chf:,.0f}")
-        col2.metric("Self-consumption", "n/a" if sc is None else f"{sc:.2f}")
-        col3.metric("Imports (CHF)", "n/a" if imports is None else f"{imports:,.0f}")
-
-        st.session_state["block_b_results"][addr] = {
-            "annual_spend_chf": annual_chf,
-            "self_consumption_share": sc,
-            "annual_import_chf": imports,
-        }
-
-    nav_buttons(back_step="block_a", next_step="results")
-
-
-# ----------------------------------------------------
-# STEP 6: RESULTS
-# ----------------------------------------------------
-def render_results_step():
+def page_results():
     st.title("Final Results — Solar21 Evaluation")
 
-    passed = st.session_state.get("passed_addresses", [])
-    A1 = st.session_state.get("A1_scores", {})
-    A2 = st.session_state.get("A2_scores", {})
-    A3 = st.session_state.get("A3_scores", {})
-    B = st.session_state.get("block_b_results", {})
+    for idx, addr in enumerate(st.session_state["addresses"]):
+        st.markdown(f"## {addr['address']} ({addr['canton']})")
 
-    for site in passed:
-        addr = site["address"]
-        st.subheader(addr)
-        st.write(f"**A1 (Roof):** {A1.get(addr)}")
-        st.write(f"**A2 (WACC):** {A2.get(addr)}")
-        st.write(f"**A3 (ESG):** {A3.get(addr)}")
-
-        imports = B.get(addr, {}).get("annual_import_chf")
-        st.write(f"**Annual imports (CHF):** {imports if imports else 'None'}")
-
+        ans = st.session_state["answers"].get(idx, {})
+        st.write(f"A1 (Roof scale): {ans.get('roof_score')}")
+        st.write(f"A2 (Owner category): {ans.get('owner_type')}")
+        st.write(f"A3 (ESG visibility): {ans.get('esg')}")
+        st.write(f"B2 Annual spend: {ans.get('spend')}")
         st.markdown("---")
 
-    if st.button("🔄 Start again"):
-        st.session_state.clear()
-        st.session_state.step = "language"
-        st.rerun()
+    restart_button()
 
-    nav_buttons(back_step="block_b")
+# -----------------------------
+# Router
+# -----------------------------
 
-
-# ----------------------------------------------------
-# ROUTER
-# ----------------------------------------------------
-step = st.session_state.step
-
-if step == "language":
-    render_language_step()
-elif step == "welcome":
-    render_welcome_step()
-elif step == "addresses":
-    render_addresses_step()
-elif step == "block_a":
-    render_block_a_step()
-elif step == "block_b":
-    render_block_b_step()
-elif step == "results":
-    render_results_step()
+if st.session_state["page"] == "lang":
+    page_lang()
+elif st.session_state["page"] == "address_entry":
+    page_address_entry()
+elif st.session_state["page"] == "questions":
+    page_questions()
+elif st.session_state["page"] == "results":
+    page_results()
