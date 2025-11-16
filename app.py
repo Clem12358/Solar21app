@@ -1,6 +1,5 @@
 import streamlit as st
 from modules.sonnendach import get_sonnendach_info
-from modules.geocoder import geocode_address
 
 # -------------------------------------------------------
 # PAGE CONFIG
