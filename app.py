@@ -129,14 +129,14 @@ st.markdown("""
     }
     
     /* Gray out non-selected language buttons */
-    .stButton>button[kind="secondary"] {
+    [data-testid="stVerticalBlock"]:has(button[kind="secondary"]) button[kind="secondary"] {
         background-color: #f5f5f5 !important;
         color: #999999 !important;
         opacity: 0.5 !important;
         border: 2px solid #e0e0e0 !important;
     }
     
-    .stButton>button[kind="secondary"]:hover {
+    [data-testid="stVerticalBlock"]:has(button[kind="secondary"]) button[kind="secondary"]:hover {
         background-color: #f5f5f5 !important;
         transform: none !important;
     }
@@ -323,18 +323,110 @@ TEXT = {
 
 def compute_roof_score(area):
     if area is None:
-        return None
+        return 0
     if area > 1000:
         return 3
     elif area > 500:
         return 2
     return 1
 
+def compute_final_score(answers, roof_score):
+    """Compute the final Solar21 site attractiveness score"""
+    
+    # Extract owner type score (first character of the answer)
+    owner_str = answers["owner_type"]
+    if "Public entity" in owner_str:
+        owner_type_score = 3
+    elif "Standard commercial" in owner_str:
+        owner_type_score = 2
+    else:
+        owner_type_score = 1
+    
+    # Extract ESG score
+    esg_str = answers["esg"]
+    if esg_str.startswith("Yes"):
+        esg_score = 3
+    elif esg_str.startswith("Not sure"):
+        esg_score = 2
+    else:
+        esg_score = 1
+    
+    # A_total: roof + owner + esg (max 9)
+    A_total = roof_score + owner_type_score + esg_score
+    
+    # Extract spend score
+    spend_str = answers["spend"]
+    if "Above 800k" in spend_str:
+        spend_score = 4
+    elif "300k — 800k" in spend_str:
+        spend_score = 3
+    elif "100k — 300k" in spend_str:
+        spend_score = 2
+    else:
+        spend_score = 1
+    
+    # Daytime score (convert percentage to 0-3)
+    daytime_pct = answers["daytime"]
+    if daytime_pct >= 75:
+        daytime_score = 3
+    elif daytime_pct >= 50:
+        daytime_score = 2
+    elif daytime_pct >= 25:
+        daytime_score = 1
+    else:
+        daytime_score = 0
+    
+    # Seasonality score (inverted - low variation is better)
+    season_str = answers["season"]
+    if "Low seasonal" in season_str:
+        season_score = 3
+    elif "Moderate" in season_str:
+        season_score = 2
+    else:
+        season_score = 1
+    
+    # 24/7 loads score
+    loads_str = answers["loads"]
+    if loads_str.startswith("Yes"):
+        loads_score = 3
+    else:
+        loads_score = 1
+    
+    # B_total: spend + daytime + season + loads (max 13, but we'll normalize)
+    # Adjusting to max 12 as per formula
+    B_total = spend_score + daytime_score + season_score + loads_score
+    
+    # Normalize
+    A_norm = A_total / 9
+    B_norm = B_total / 13  # actual max is 13 (4+3+3+3)
+    
+    # Apply weights
+    final_score = 0.40 * A_norm + 0.60 * B_norm
+    
+    # Convert to 0-100 scale
+    final_score_100 = final_score * 100
+    
+    return round(final_score_100, 1)
+
+def get_score_interpretation(score):
+    """Return interpretation and recommendation based on score"""
+    if score >= 85:
+        return ("Exceptional match", "Engage immediately. Priority 1.", "🟢")
+    elif score >= 70:
+        return ("Strong match", "Move forward quickly.", "🟢")
+    elif score >= 55:
+        return ("Moderate suitability", "Needs deeper analysis (segment loads, roof segmentation).", "🟡")
+    elif score >= 40:
+        return ("Weak alignment", "Evaluate only if roof is large or strategic location.", "🟠")
+    else:
+        return ("Poor fit", "Likely not viable for Solar21's model.", "🔴")
+
 def restart_button():
     st.markdown("---")
     if st.button(TEXT["restart"][st.session_state["language"]]):
         st.session_state.clear()
         init_state()
+        st.rerun()
 
 # -------------------------------------------------------
 # PAGE 1 — LANGUAGE
@@ -499,16 +591,88 @@ def page_questions():
 
     prefix = f"a{idx}_"
 
+    # Define answer options for each language
+    owner_options = {
+        "en": [
+            "Public entity or large institutional owner — Hospitals, municipalities, cantonal buildings, universities, major corporates. Typically low cost of capital and stable approval processes.",
+            "Standard commercial owner — Regular private companies, logistics firms, retail centers, property companies.",
+            "Private individual or small SME — Smaller budgets, higher financing constraints, usually slower decision cycles."
+        ],
+        "fr": [
+            "Entité publique ou grand propriétaire institutionnel — Hôpitaux, municipalités, bâtiments cantonaux, universités, grandes entreprises. Généralement faible coût du capital et processus d'approbation stables.",
+            "Propriétaire commercial standard — Entreprises privées régulières, entreprises de logistique, centres commerciaux, sociétés immobilières.",
+            "Particulier ou petite PME — Budgets plus petits, contraintes de financement plus élevées, cycles de décision généralement plus lents."
+        ],
+        "de": [
+            "Öffentliche Einrichtung oder großer institutioneller Eigentümer — Krankenhäuser, Gemeinden, Kantonsgebäude, Universitäten, große Unternehmen. Typischerweise niedrige Kapitalkosten und stabile Genehmigungsverfahren.",
+            "Standard-Gewerbeinhaber — Reguläre Privatunternehmen, Logistikunternehmen, Einkaufszentren, Immobiliengesellschaften.",
+            "Privatperson oder kleines KMU — Kleinere Budgets, höhere Finanzierungsbeschränkungen, in der Regel langsamere Entscheidungszyklen."
+        ]
+    }
+
+    esg_options = {
+        "en": [
+            "Yes — sustainability is clearly part of their identity (Website, annual reports, labels, certifications, public commitments)",
+            "Not sure — no clear signal (No obvious information available)",
+            "No — sustainability is not a visible priority (No ESG communication, purely cost-driven decision-making)"
+        ],
+        "fr": [
+            "Oui — la durabilité fait clairement partie de leur identité (Site web, rapports annuels, labels, certifications, engagements publics)",
+            "Incertain — aucun signal clair (Aucune information évidente disponible)",
+            "Non — la durabilité n'est pas une priorité visible (Aucune communication ESG, décisions purement basées sur les coûts)"
+        ],
+        "de": [
+            "Ja — Nachhaltigkeit ist eindeutig Teil ihrer Identität (Website, Jahresberichte, Labels, Zertifizierungen, öffentliche Verpflichtungen)",
+            "Unsicher — kein klares Signal (Keine offensichtlichen Informationen verfügbar)",
+            "Nein — Nachhaltigkeit ist keine sichtbare Priorität (Keine ESG-Kommunikation, rein kostenorientierte Entscheidungsfindung)"
+        ]
+    }
+
+    spend_options = {
+        "en": ["Below 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Above 800k CHF"],
+        "fr": ["Moins de 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Plus de 800k CHF"],
+        "de": ["Unter 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Über 800k CHF"]
+    }
+
+    season_options = {
+        "en": [
+            "Low seasonal variation (±10%) — Consumption stays stable across the year",
+            "Moderate variation (±10–25%) — Some seasonal differences (e.g., cooling or heating loads)",
+            "High variation (>25%) — Strong seasonality, big differences between summer and winter"
+        ],
+        "fr": [
+            "Faible variation saisonnière (±10%) — La consommation reste stable tout au long de l'année",
+            "Variation modérée (±10–25%) — Quelques différences saisonnières (par ex. charges de refroidissement ou de chauffage)",
+            "Forte variation (>25%) — Forte saisonnalité, grandes différences entre été et hiver"
+        ],
+        "de": [
+            "Geringe saisonale Schwankung (±10%) — Verbrauch bleibt über das Jahr stabil",
+            "Mäßige Schwankung (±10–25%) — Einige saisonale Unterschiede (z.B. Kühl- oder Heizlasten)",
+            "Hohe Schwankung (>25%) — Starke Saisonalität, große Unterschiede zwischen Sommer und Winter"
+        ]
+    }
+
+    loads_options = {
+        "en": [
+            "Yes — important 24/7 loads (Cold storage, server rooms, industrial baseload, data centers)",
+            "No — mainly daytime or irregular loads"
+        ],
+        "fr": [
+            "Oui — charges importantes 24h/24 7j/7 (Stockage frigorifique, salles de serveurs, charge de base industrielle, centres de données)",
+            "Non — principalement charges diurnes ou irrégulières"
+        ],
+        "de": [
+            "Ja — wichtige 24/7-Lasten (Kühlräume, Serverräume, industrielle Grundlast, Rechenzentren)",
+            "Nein — hauptsächlich Tages- oder unregelmäßige Lasten"
+        ]
+    }
+
     # OWNER TYPE
     st.markdown(f"### {TEXT['owner_type'][L]}")
     st.caption(TEXT["owner_type_help"][L])
     owner_type = st.radio(
         "",
-        [
-            "Public entity or large institutional owner — Hospitals, municipalities, cantonal buildings, universities, major corporates. Typically low cost of capital and stable approval processes.",
-            "Standard commercial owner — Regular private companies, logistics firms, retail centers, property companies.",
-            "Private individual or small SME — Smaller budgets, higher financing constraints, usually slower decision cycles."
-        ],
+        owner_options[L],
         key=prefix + "owner",
         label_visibility="collapsed"
     )
@@ -519,11 +683,7 @@ def page_questions():
     st.caption(TEXT["esg_help"][L])
     esg = st.radio(
         "",
-        [
-            "Yes — sustainability is clearly part of their identity (Website, annual reports, labels, certifications, public commitments)",
-            "Not sure — no clear signal (No obvious information available)",
-            "No — sustainability is not a visible priority (No ESG communication, purely cost-driven decision-making)"
-        ],
+        esg_options[L],
         key=prefix + "esg",
         label_visibility="collapsed"
     )
@@ -546,7 +706,7 @@ def page_questions():
     st.caption(TEXT["spend_help"][L])
     spend = st.radio(
         "",
-        ["Below 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Above 800k CHF"],
+        spend_options[L],
         key=prefix + "spend",
         label_visibility="collapsed"
     )
@@ -557,11 +717,7 @@ def page_questions():
     st.caption(TEXT["season_help"][L])
     season = st.radio(
         "",
-        [
-            "Low seasonal variation (±10%) — Consumption stays stable across the year",
-            "Moderate variation (±10–25%) — Some seasonal differences (e.g., cooling or heating loads)",
-            "High variation (>25%) — Strong seasonality, big differences between summer and winter"
-        ],
+        season_options[L],
         key=prefix + "season",
         label_visibility="collapsed"
     )
@@ -572,10 +728,7 @@ def page_questions():
     st.caption(TEXT["loads_help"][L])
     loads = st.radio(
         "",
-        [
-            "Yes — important 24/7 loads (Cold storage, server rooms, industrial baseload, data centers)",
-            "No — mainly daytime or irregular loads"
-        ],
+        loads_options[L],
         key=prefix + "247",
         label_visibility="collapsed"
     )
@@ -619,20 +772,39 @@ def page_results():
     for idx, site in enumerate(st.session_state["addresses"]):
         ans = st.session_state["answers"][idx]
         
+        # Calculate the final score
+        final_score = compute_final_score(ans, ans["roof_score"])
+        interpretation, recommendation, emoji = get_score_interpretation(final_score)
+        
         st.markdown(f"## 📍 {site['address']} ({site['canton']})")
         
+        # Display the main score prominently
+        col_score, col_interp = st.columns([1, 2])
+        
+        with col_score:
+            st.metric("Solar21 Score", f"{final_score}/100")
+        
+        with col_interp:
+            st.markdown(f"### {emoji} {interpretation}")
+            st.write(f"**Recommendation:** {recommendation}")
+        
+        st.markdown("---")
+        
+        # Detailed breakdown
         col1, col2 = st.columns(2)
         
         with col1:
-            st.metric("Roof Score", ans['roof_score'] or "N/A")
-            st.write(f"**Owner type:** {ans['owner_type']}")
-            st.write(f"**ESG visibility:** {ans['esg']}")
+            st.write(f"**Roof Score:** {ans['roof_score']}/3")
+            if site['roof_area']:
+                st.write(f"*(Roof area: {site['roof_area']} m²)*")
+            st.write(f"**Owner type:** {ans['owner_type'].split('—')[0].strip()}")
+            st.write(f"**ESG visibility:** {ans['esg'].split('—')[0].strip()}")
         
         with col2:
             st.write(f"**Electricity spend:** {ans['spend']}")
             st.write(f"**Daytime consumption:** {ans['daytime']}%")
-            st.write(f"**Seasonal variation:** {ans['season']}")
-            st.write(f"**24/7 loads:** {ans['loads']}")
+            st.write(f"**Seasonal variation:** {ans['season'].split('—')[0].strip()}")
+            st.write(f"**24/7 loads:** {ans['loads'].split('—')[0].strip()}")
         
         st.markdown("---")
 
