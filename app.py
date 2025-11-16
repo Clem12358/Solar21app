@@ -2,18 +2,69 @@ import streamlit as st
 from modules.sonnendach import get_sonnendach_info
 from modules.geocoder import geocode_address
 
-st.set_page_config(layout="wide", page_title="Solar21 Evaluation Tool")
+# -------------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------------
+st.set_page_config(
+    layout="wide",
+    page_title="Solar21 Evaluation Tool",
+)
 
-# -----------------------------
-# Helpers
-# -----------------------------
+# -------------------------------------------------------
+# CUSTOM CSS (Solar21 style)
+# -------------------------------------------------------
+logo_path = "solar21_logo.png"
+
+st.markdown(
+    f"""
+    <style>
+        .main {{
+            background-color: #0b0b0b;
+            color: white;
+        }}
+
+        h1, h2, h3, h4 {{
+            color: white !important;
+            font-weight: 700 !important;
+        }}
+
+        .stButton>button {{
+            background-color: #00FF40 !important;
+            color: black !important;
+            font-weight: bold;
+            border-radius: 8px;
+            border: none;
+            padding: 0.6rem 1.2rem;
+        }}
+
+        .stRadio>div>label {{
+            font-size: 1.05rem !important;
+        }}
+
+        #logo-wrapper {{
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }}
+    </style>
+
+    <div id="logo-wrapper">
+        <img src="data:image/png;base64,{st.image(logo_path, output_format="PNG", use_column_width=False)}">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# -------------------------------------------------------
+# SESSION STATE INIT
+# -------------------------------------------------------
 
 def goto(page):
     st.session_state["page"] = page
 
 def init_state():
     defaults = {
-        "page": "lang",       # first page
+        "page": "lang",
         "addresses": [],
         "current_index": 0,
         "answers": {},
@@ -24,25 +75,23 @@ def init_state():
 
 init_state()
 
-# Compute A1 roof score silently
-def compute_roof_score(roof_area):
-    if roof_area is None:
+# -------------------------------------------------------
+# HELPERS
+# -------------------------------------------------------
+
+def compute_roof_score(area):
+    if area is None:
         return None
-    if roof_area > 1000:
+    if area > 1000:
         return 3
-    elif roof_area > 500:
+    elif area > 500:
         return 2
-    else:
-        return 1
+    return 1
 
-# -----------------------------
-# UI components
-# -----------------------------
-
-def back_button(target):
+def back_button(target_page):
     st.markdown("---")
     if st.button("← Back"):
-        goto(target)
+        goto(target_page)
 
 def restart_button():
     st.markdown("---")
@@ -51,22 +100,24 @@ def restart_button():
             del st.session_state[key]
         init_state()
 
-# -----------------------------
-# Page: Language choice
-# -----------------------------
+# -------------------------------------------------------
+# PAGE 1 — LANGUAGE
+# -------------------------------------------------------
 
 def page_lang():
     st.title("Choose your language")
+
     lang = st.radio("", ["English"], index=0)
-    if st.button("Continue"):
+
+    if st.button("Continue →"):
         goto("address_entry")
 
-# -----------------------------
-# Page: Address entry
-# -----------------------------
+# -------------------------------------------------------
+# PAGE 2 — ENTER ADDRESSES
+# -------------------------------------------------------
 
 def page_address_entry():
-    st.title("Project sites — enter addresses")
+    st.title("Project Sites — Addresses")
 
     if st.button("+ Add another address"):
         st.session_state["addresses"].append({
@@ -74,133 +125,131 @@ def page_address_entry():
             "canton": "",
             "roof_area": None,
             "roof_pitch": None,
-            "roof_orientation": None
+            "roof_orientation": None,
         })
 
-    # If no addresses yet, create the first
     if len(st.session_state["addresses"]) == 0:
         st.session_state["addresses"].append({
             "address": "",
             "canton": "",
             "roof_area": None,
             "roof_pitch": None,
-            "roof_orientation": None
+            "roof_orientation": None,
         })
 
     for idx, entry in enumerate(st.session_state["addresses"]):
         st.markdown(f"### Address {idx+1}")
 
         entry["address"] = st.text_input(
-            f"Enter the full address for site {idx+1}",
+            f"Full address for site {idx+1}",
             value=entry["address"],
             key=f"addr_{idx}"
         )
 
         entry["canton"] = st.selectbox(
-            "Select canton",
-            ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL", "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
-            index=0 if entry["canton"] == "" else ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL","BS","TG","SO","NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
+            "Canton",
+            ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL",
+             "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
+            index=0 if entry["canton"] == "" else
+            ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL",
+             "BS","TG","SO","NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
             key=f"canton_{idx}"
         )
 
-        if st.button(f"Fetch rooftop data for address {idx+1}"):
-            with st.spinner("Fetching rooftop suitability…"):
-                result = get_sonnendach_info(entry["address"])
-                if result:
-                    entry["roof_area"] = result.get("roof_area")
-                    entry["roof_pitch"] = result.get("pitch")
-                    entry["roof_orientation"] = result.get("orientation")
+        if st.button(f"Fetch rooftop info (site {idx+1})"):
+            with st.spinner("Contacting Sonnendach..."):
+                data = get_sonnendach_info(entry["address"])
+                if data:
+                    entry["roof_area"] = data.get("roof_area")
+                    entry["roof_pitch"] = data.get("pitch")
+                    entry["roof_orientation"] = data.get("orientation")
+                    st.success("Rooftop data loaded.")
                 else:
-                    st.error("Could not fetch data for this address.")
+                    st.error("Could not retrieve rooftop data.")
 
-        if entry["roof_area"] is not None:
-            st.success(f"Rooftop data loaded: {entry['roof_area']} m²")
+        if entry["roof_area"]:
+            st.write(f"Rooftop area detected: **{entry['roof_area']} m²**")
 
         st.markdown("---")
 
     if st.button("Save & continue →"):
-        # Validate
         for e in st.session_state["addresses"]:
             if e["address"].strip() == "" or e["canton"].strip() == "":
-                st.error("Each address must have an address and a canton.")
+                st.error("Each site must have an address and canton.")
                 return
         st.session_state["current_index"] = 0
         goto("questions")
 
     back_button("lang")
 
-# -----------------------------
-# Page: Full question page for each address
-# -----------------------------
+# -------------------------------------------------------
+# PAGE 3 — QUESTIONS (ONE PAGE PER ADDRESS)
+# -------------------------------------------------------
 
 def page_questions():
     idx = st.session_state["current_index"]
-    addr_data = st.session_state["addresses"][idx]
+    site = st.session_state["addresses"][idx]
 
-    address = addr_data["address"]
-    canton = addr_data["canton"]
-    key_prefix = f"addr_{idx}"
+    address = site["address"]
+    canton = site["canton"]
+    prefix = f"a{idx}_"
 
-    st.title(f"{address} ({canton})")
+    st.title(f"Site Evaluation — {address} ({canton})")
 
-    st.markdown("## Owner characteristics")
-
-    # A2 — Owner category
+    # OWNER TYPE
     owner_type = st.radio(
-        "**What type of owner is this?**  
-This affects investment decisions and deal structure.",
+        """### Owner type  
+Choose the profile that best describes the site owner.""",
         [
-            "3 — Public or large institutional owner (very low cost of capital)",
+            "3 — Public / institutional / large groups (very low cost of capital)",
             "2 — Standard commercial owner",
-            "1 — Private individual / SME (higher capital constraints)"
+            "1 — Private individual or SME (higher financing constraints)",
         ],
-        key=key_prefix + "_owner"
+        key=prefix + "owner"
     )
 
-    # A3 — ESG
+    # ESG
     esg = st.radio(
-        "**Is the owner visibly engaged in sustainability topics?**  
-This can strengthen the case for on-site solar adoption.",
+        """### ESG visibility  
+Is the owner known to be engaged in sustainability topics?""",
         ["Yes", "IDK", "No"],
-        key=key_prefix + "_esg"
+        key=prefix + "esg"
     )
 
-    st.markdown("## Consumption profile")
+    st.markdown("### Electricity consumption profile")
 
-    # B1 — Daytime %
+    # DAYTIME %
     daytime = st.slider(
-        "**Share of electricity consumed during daytime (approx.)**  
-Higher daytime consumption increases the value of on-site solar.",
+        """Approximate share of yearly electricity consumed between **08:00–18:00**  
+Higher daytime load increases the site's solar attractiveness.""",
         0, 100, 60,
-        key=key_prefix + "_daytime"
+        key=prefix + "daytime"
     )
 
-    # B2 — Spend
+    # SPEND
     spend = st.radio(
-        "**What is the site's annual electricity spend?**  
-Estimate the total yearly cost (CHF).",
+        """Estimated **annual electricity spend (CHF)**  
+Choose the bracket that best matches the site's yearly cost.""",
         ["<100k", "100–300k", "300–800k", ">800k"],
-        key=key_prefix + "_spend"
+        key=prefix + "spend"
     )
 
-    # B3 — Seasonality
+    # SEASONALITY
     season = st.radio(
-        "**How seasonal is the load profile?**  
-High seasonality reduces the share of solar that can be consumed on-site.",
+        """How strong is the **seasonal variation** of electricity use?  
+High seasonality reduces self-consumption.""",
         ["Low (±10%)", "Moderate (±10–25%)", "High (>25%)"],
-        key=key_prefix + "_season"
+        key=prefix + "season"
     )
 
-    # B4 — 24/7 loads
+    # 24/7
     loads = st.radio(
-        "**Does the site have important 24/7 loads (servers, cold storage, etc.)?**",
+        """Does the site operate **24/7 loads** (cold rooms, servers, critical processes)?""",
         ["Yes", "No"],
-        key=key_prefix + "_247"
+        key=prefix + "247"
     )
 
-    st.markdown("---")
-
-    # Save answers in a dict
+    # Save results
     st.session_state["answers"][idx] = {
         "owner_type": owner_type,
         "esg": esg,
@@ -208,49 +257,52 @@ High seasonality reduces the share of solar that can be consumed on-site.",
         "spend": spend,
         "season": season,
         "loads": loads,
-        "roof_score": compute_roof_score(addr_data["roof_area"])
+        "roof_score": compute_roof_score(site["roof_area"]),
     }
 
-    # Navigation
-    cols = st.columns(2)
+    # NAVIGATION
+    st.markdown("---")
+    c1, c2 = st.columns(2)
+
     if idx > 0:
-        if cols[0].button("← Back"):
+        if c1.button("← Back"):
             st.session_state["current_index"] -= 1
 
-    if cols[1].button("Continue →"):
+    if c2.button("Continue →"):
         if idx < len(st.session_state["addresses"]) - 1:
             st.session_state["current_index"] += 1
         else:
             goto("results")
 
-# -----------------------------
-# Page: Final results
-# -----------------------------
+# -------------------------------------------------------
+# PAGE 4 — RESULTS
+# -------------------------------------------------------
 
 def page_results():
     st.title("Final Results — Solar21 Evaluation")
 
-    for idx, addr in enumerate(st.session_state["addresses"]):
-        st.markdown(f"## {addr['address']} ({addr['canton']})")
-
-        ans = st.session_state["answers"].get(idx, {})
-        st.write(f"A1 (Roof scale): {ans.get('roof_score')}")
-        st.write(f"A2 (Owner category): {ans.get('owner_type')}")
-        st.write(f"A3 (ESG visibility): {ans.get('esg')}")
-        st.write(f"B2 Annual spend: {ans.get('spend')}")
+    for idx, site in enumerate(st.session_state["addresses"]):
+        a = st.session_state["answers"].get(idx, {})
+        st.markdown(f"## {site['address']} ({site['canton']})")
+        st.write(f"**A1 – Roof score:** {a.get('roof_score')}")
+        st.write(f"**A2 – Owner type:** {a.get('owner_type')}")
+        st.write(f"**A3 – ESG visibility:** {a.get('esg')}")
+        st.write(f"**Annual spend bracket:** {a.get('spend')}")
         st.markdown("---")
 
     restart_button()
 
-# -----------------------------
-# Router
-# -----------------------------
+# -------------------------------------------------------
+# ROUTER
+# -------------------------------------------------------
 
-if st.session_state["page"] == "lang":
+page = st.session_state["page"]
+
+if page == "lang":
     page_lang()
-elif st.session_state["page"] == "address_entry":
+elif page == "address_entry":
     page_address_entry()
-elif st.session_state["page"] == "questions":
+elif page == "questions":
     page_questions()
-elif st.session_state["page"] == "results":
+elif page == "results":
     page_results()
