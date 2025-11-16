@@ -165,8 +165,10 @@ st.markdown("""
 # LOGO (centered)
 # -------------------------------------------------------
 import os
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
+
+# Center the logo using columns
+logo_col1, logo_col2, logo_col3 = st.columns([1, 1, 1])
+with logo_col2:
     # Try multiple possible paths for the logo
     possible_paths = [
         "Solar21app/solar21_logo.png",
@@ -178,7 +180,10 @@ with col2:
     logo_loaded = False
     for path in possible_paths:
         if os.path.exists(path):
-            st.image(path, width=200)  # Smaller logo size
+            # Center the image within the column
+            st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
+            st.image(path, width=200)
+            st.markdown('</div>', unsafe_allow_html=True)
             logo_loaded = True
             break
     
@@ -314,6 +319,110 @@ TEXT = {
         "fr": "Résultats finaux — Évaluation Solar21",
         "de": "Endergebnisse — Solar21 Bewertung"
     },
+    "score_label": {
+        "en": "Solar21 Score",
+        "fr": "Score Solar21",
+        "de": "Solar21 Bewertung"
+    },
+    "recommendation_label": {
+        "en": "Recommendation",
+        "fr": "Recommandation",
+        "de": "Empfehlung"
+    },
+    "roof_score_label": {
+        "en": "Roof Score",
+        "fr": "Score du toit",
+        "de": "Dachbewertung"
+    },
+    "roof_area_label": {
+        "en": "Roof area",
+        "fr": "Surface du toit",
+        "de": "Dachfläche"
+    },
+    "owner_type_label": {
+        "en": "Owner type",
+        "fr": "Type de propriétaire",
+        "de": "Eigentümertyp"
+    },
+    "esg_label": {
+        "en": "ESG visibility",
+        "fr": "Visibilité ESG",
+        "de": "ESG-Sichtbarkeit"
+    },
+    "spend_label": {
+        "en": "Electricity spend",
+        "fr": "Dépenses d'électricité",
+        "de": "Stromkosten"
+    },
+    "daytime_label": {
+        "en": "Daytime consumption",
+        "fr": "Consommation diurne",
+        "de": "Tagesverbrauch"
+    },
+    "season_label": {
+        "en": "Seasonal variation",
+        "fr": "Variation saisonnière",
+        "de": "Saisonale Schwankung"
+    },
+    "loads_label": {
+        "en": "24/7 loads",
+        "fr": "Charges 24/7",
+        "de": "24/7-Lasten"
+    },
+    "interpretation": {
+        "exceptional": {
+            "en": "Exceptional match",
+            "fr": "Correspondance exceptionnelle",
+            "de": "Außergewöhnliche Übereinstimmung"
+        },
+        "strong": {
+            "en": "Strong match",
+            "fr": "Forte correspondance",
+            "de": "Starke Übereinstimmung"
+        },
+        "moderate": {
+            "en": "Moderate suitability",
+            "fr": "Adéquation modérée",
+            "de": "Mäßige Eignung"
+        },
+        "weak": {
+            "en": "Weak alignment",
+            "fr": "Faible alignement",
+            "de": "Schwache Ausrichtung"
+        },
+        "poor": {
+            "en": "Poor fit",
+            "fr": "Mauvaise adéquation",
+            "de": "Schlechte Eignung"
+        }
+    },
+    "recommendation": {
+        "exceptional": {
+            "en": "Engage immediately. Priority 1.",
+            "fr": "Engager immédiatement. Priorité 1.",
+            "de": "Sofort engagieren. Priorität 1."
+        },
+        "strong": {
+            "en": "Move forward quickly.",
+            "fr": "Avancer rapidement.",
+            "de": "Schnell voranschreiten."
+        },
+        "moderate": {
+            "en": "Needs deeper analysis (segment loads, roof segmentation).",
+            "fr": "Nécessite une analyse plus approfondie (charges par segment, segmentation du toit).",
+            "de": "Benötigt tiefere Analyse (Lastsegmente, Dachsegmentierung)."
+        },
+        "weak": {
+            "en": "Evaluate only if roof is large or strategic location.",
+            "fr": "Évaluer uniquement si le toit est grand ou l'emplacement stratégique.",
+            "de": "Nur bewerten, wenn Dach groß oder strategischer Standort."
+        },
+        "poor": {
+            "en": "Likely not viable for Solar21's model.",
+            "fr": "Probablement pas viable pour le modèle Solar21.",
+            "de": "Wahrscheinlich nicht für Solar21-Modell geeignet."
+        }
+    },
     "restart": {"en": "Start again", "fr": "Recommencer", "de": "Neu starten"},
 }
 
@@ -408,18 +517,18 @@ def compute_final_score(answers, roof_score):
     
     return round(final_score_100, 1)
 
-def get_score_interpretation(score):
+def get_score_interpretation(score, lang="en"):
     """Return interpretation and recommendation based on score"""
     if score >= 85:
-        return ("Exceptional match", "Engage immediately. Priority 1.", "🟢")
+        return (TEXT["interpretation"]["exceptional"][lang], TEXT["recommendation"]["exceptional"][lang], "🟢")
     elif score >= 70:
-        return ("Strong match", "Move forward quickly.", "🟢")
+        return (TEXT["interpretation"]["strong"][lang], TEXT["recommendation"]["strong"][lang], "🟢")
     elif score >= 55:
-        return ("Moderate suitability", "Needs deeper analysis (segment loads, roof segmentation).", "🟡")
+        return (TEXT["interpretation"]["moderate"][lang], TEXT["recommendation"]["moderate"][lang], "🟡")
     elif score >= 40:
-        return ("Weak alignment", "Evaluate only if roof is large or strategic location.", "🟠")
+        return (TEXT["interpretation"]["weak"][lang], TEXT["recommendation"]["weak"][lang], "🟠")
     else:
-        return ("Poor fit", "Likely not viable for Solar21's model.", "🔴")
+        return (TEXT["interpretation"]["poor"][lang], TEXT["recommendation"]["poor"][lang], "🔴")
 
 def restart_button():
     st.markdown("---")
@@ -774,7 +883,7 @@ def page_results():
         
         # Calculate the final score
         final_score = compute_final_score(ans, ans["roof_score"])
-        interpretation, recommendation, emoji = get_score_interpretation(final_score)
+        interpretation, recommendation, emoji = get_score_interpretation(final_score, L)
         
         st.markdown(f"## 📍 {site['address']} ({site['canton']})")
         
@@ -782,11 +891,11 @@ def page_results():
         col_score, col_interp = st.columns([1, 2])
         
         with col_score:
-            st.metric("Solar21 Score", f"{final_score}/100")
+            st.metric(TEXT["score_label"][L], f"{final_score}/100")
         
         with col_interp:
             st.markdown(f"### {emoji} {interpretation}")
-            st.write(f"**Recommendation:** {recommendation}")
+            st.write(f"**{TEXT['recommendation_label'][L]}:** {recommendation}")
         
         st.markdown("---")
         
@@ -794,17 +903,17 @@ def page_results():
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write(f"**Roof Score:** {ans['roof_score']}/3")
+            st.write(f"**{TEXT['roof_score_label'][L]}:** {ans['roof_score']}/3")
             if site['roof_area']:
-                st.write(f"*(Roof area: {site['roof_area']} m²)*")
-            st.write(f"**Owner type:** {ans['owner_type'].split('—')[0].strip()}")
-            st.write(f"**ESG visibility:** {ans['esg'].split('—')[0].strip()}")
+                st.write(f"*({TEXT['roof_area_label'][L]}: {site['roof_area']} m²)*")
+            st.write(f"**{TEXT['owner_type_label'][L]}:** {ans['owner_type'].split('—')[0].strip()}")
+            st.write(f"**{TEXT['esg_label'][L]}:** {ans['esg'].split('—')[0].strip()}")
         
         with col2:
-            st.write(f"**Electricity spend:** {ans['spend']}")
-            st.write(f"**Daytime consumption:** {ans['daytime']}%")
-            st.write(f"**Seasonal variation:** {ans['season'].split('—')[0].strip()}")
-            st.write(f"**24/7 loads:** {ans['loads'].split('—')[0].strip()}")
+            st.write(f"**{TEXT['spend_label'][L]}:** {ans['spend']}")
+            st.write(f"**{TEXT['daytime_label'][L]}:** {ans['daytime']}%")
+            st.write(f"**{TEXT['season_label'][L]}:** {ans['season'].split('—')[0].strip()}")
+            st.write(f"**{TEXT['loads_label'][L]}:** {ans['loads'].split('—')[0].strip()}")
         
         st.markdown("---")
 
