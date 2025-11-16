@@ -55,17 +55,33 @@ def render_language_step():
         """,
         unsafe_allow_html=True,
     )
+
     st.title("Solar21 Pre-Check")
 
+    # If language not chosen yet, show selection
     if st.session_state.language is None:
         st.subheader("Choose your language")
         col1, col2, col3 = st.columns(3)
-        if col1.button("🇬🇧 English", use_container_width=True): st.session_state.language = "en"
-        if col2.button("🇫🇷 Français", use_container_width=True): st.session_state.language = "fr"
-        if col3.button("🇩🇪 Deutsch", use_container_width=True): st.session_state.language = "de"
+
+        if col1.button("🇬🇧 English", use_container_width=True):
+            st.session_state.language = "en"
+            st.session_state.step = "welcome"
+            st.experimental_rerun()
+
+        if col2.button("🇫🇷 Français", use_container_width=True):
+            st.session_state.language = "fr"
+            st.session_state.step = "welcome"
+            st.experimental_rerun()
+
+        if col3.button("🇩🇪 Deutsch", use_container_width=True):
+            st.session_state.language = "de"
+            st.session_state.step = "welcome"
+            st.experimental_rerun()
+
     else:
-        st.success("Language selected!")
-        if st.button("➡️ Continue"): st.session_state.step = "welcome"
+        # Auto-redirect if language already stored
+        st.session_state.step = "welcome"
+        st.experimental_rerun()
 
 # ----------------------------------------------------
 # STEP 2: WELCOME PAGE
