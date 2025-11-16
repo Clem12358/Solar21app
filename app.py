@@ -10,26 +10,19 @@ st.set_page_config(
     page_title="Solar21 Evaluation Tool",
 )
 
-# -----------------------------
-# GLOBAL DESIGN OVERRIDES
-# -----------------------------
-PRIMARY_GREEN = "#00E20C"   # from the logo
+PRIMARY_GREEN = "#00E20C"
 PRIMARY_DARK = "#000000"
 
+# -------------------------------------------------------
+# GLOBAL CSS OVERRIDES
+# -------------------------------------------------------
 st.markdown(f"""
 <style>
 
-/* --- GLOBAL TEXT COLOR OVERRIDES (dark theme → light UI) --- */
-:root {{
-    --text-color: #000000 !important;
-    --secondary-text-color: #333333 !important;
-}}
-
-/* Brutal fix: all text inside radios = black & fully opaque */
-.stRadio, .stRadio * {{
-    color: #000000 !important;
-    opacity: 1 !important;
-    font-weight: 600 !important;
+/* --- FORCE WHITE THEME EVEN IF BROWSER IS DARK MODE --- */
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {{
+    background-color: white !important;
+    color: black !important;
 }}
 
 /* Hide sidebar */
@@ -37,99 +30,73 @@ st.markdown(f"""
     display: none !important;
 }}
 
-/* Full-width container */
+/* Container */
 .block-container {{
-    padding-left: 3rem !important;
-    padding-right: 3rem !important;
-    padding-top: 1.5rem !important;
-    padding-bottom: 3rem !important;
-    max-width: 1200px;
-}}
-
-/* White background + base text */
-html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {{
-    background-color: #ffffff !important;
-    color: #111111 !important;
-    font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding-top: 2.5rem !important;
+    max-width: 1350px !important;
 }}
 
 /* Headings */
-h1, h2, h3, h4, h5, h6 {{
-    color: {PRIMARY_DARK} !important;
-    font-weight: 700 !important;
-}}
-
-/* Section dividers */
-hr {{
-    border-top: 1px solid #EEEEEE !important;
+h1, h2, h3, h4, h5 {{
+    color: black !important;
+    font-weight: 800 !important;
 }}
 
 /* Buttons */
 .stButton>button {{
     background-color: {PRIMARY_GREEN} !important;
-    color: #000000 !important;
+    color: black !important;
     border-radius: 999px !important;
-    padding: 0.6rem 1.8rem !important;
-    border: none !important;
+    padding: 0.7rem 2.4rem !important;
+    font-size: 1.1rem !important;
     font-weight: 600 !important;
-    font-size: 0.95rem !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    border: none !important;
 }}
 .stButton>button:hover {{
     background-color: #00C60A !important;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
 }}
 
-/* Accent color for radio + slider */
-input[type="radio"], input[type="range"] {{
-    accent-color: {PRIMARY_GREEN};
+/* Language cards */
+.lang-card {{
+    border: 2px solid #e5e5e5;
+    border-radius: 16px;
+    padding: 22px;
+    text-align: center;
+    font-size: 1.35rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: white;
+    transition: all 0.15s ease;
+    color: black;
+    margin-top: 12px;
 }}
-
-/* Inputs & select boxes */
-.stTextInput>div>div>input,
-.stSelectbox>div>div>div {{
-    border-radius: 0.6rem !important;
-    border: 1px solid #DDDDDD !important;
+.lang-card:hover {{
+    border-color: {PRIMARY_GREEN};
+    background-color: #f2fff3;
 }}
-.stSelectbox>label,
-.stTextInput>label {{
-    font-weight: 600 !important;
-    color: #222222 !important;
-    margin-bottom: 0.15rem !important;
-}}
-
-/* Sliders */
-.stSlider > div > div > div {{
-    color: #111111 !important;
+.lang-selected {{
+    border-color: {PRIMARY_GREEN} !important;
+    background-color: #eaffea !important;
 }}
 
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# LOGO (smaller & perfectly centered)
+# LOGO (always visible, centered)
 # -------------------------------------------------------
-logo_path = Path(__file__).parent / "solar21_logo.png"
-
 st.markdown(
     """
-    <div style="
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        margin-top: 10px;
-        margin-bottom: 10px;
-    ">
-        <img src="solar21_logo.png" style="width:180px; height:auto;"/>
+    <div style="width:100%; display:flex; justify-content:center; margin-top:10px; margin-bottom:15px;">
+        <img src="solar21_logo.png" style="width:180px; height:auto;">
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 # -------------------------------------------------------
-# SESSION STATE INIT
+# SESSION STATE
 # -------------------------------------------------------
-
 def goto(page):
     st.session_state["page"] = page
 
@@ -139,6 +106,7 @@ def init_state():
         "addresses": [],
         "current_index": 0,
         "answers": {},
+        "lang_choice": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -147,9 +115,54 @@ def init_state():
 init_state()
 
 # -------------------------------------------------------
-# HELPERS
+# PAGE 1 — LANGUAGE
 # -------------------------------------------------------
+def page_lang():
 
+    st.markdown("<h1>Solar21 Pre-Check</h1>", unsafe_allow_html=True)
+    st.markdown("### Choose your language")
+
+    selected = st.session_state.get("lang_choice")
+
+    c1, c2, c3 = st.columns(3)
+
+    # English
+    with c1:
+        clicked = st.button("🇬🇧 English", key="btn_en")
+        st.markdown(
+            f"<div class='lang-card {'lang-selected' if selected=='en' else ''}'>🇬🇧 English</div>",
+            unsafe_allow_html=True,
+        )
+        if clicked:
+            st.session_state["lang_choice"] = "en"
+            goto("address_entry")
+
+    # French
+    with c2:
+        clicked = st.button("🇫🇷 Français", key="btn_fr")
+        st.markdown(
+            f"<div class='lang-card {'lang-selected' if selected=='fr' else ''}'>🇫🇷 Français</div>",
+            unsafe_allow_html=True,
+        )
+        if clicked:
+            st.session_state["lang_choice"] = "fr"
+            goto("address_entry")
+
+    # German
+    with c3:
+        clicked = st.button("🇩🇪 Deutsch", key="btn_de")
+        st.markdown(
+            f"<div class='lang-card {'lang-selected' if selected=='de' else ''}'>🇩🇪 Deutsch</div>",
+            unsafe_allow_html=True,
+        )
+        if clicked:
+            st.session_state["lang_choice"] = "de"
+            goto("address_entry")
+
+
+# -------------------------------------------------------
+# HELPER FUNCTIONS
+# -------------------------------------------------------
 def compute_roof_score(area):
     if area is None:
         return None
@@ -172,32 +185,10 @@ def restart_button():
         init_state()
 
 # -------------------------------------------------------
-# PAGE 1 — LANGUAGE
-# -------------------------------------------------------
-
-def page_lang():
-    st.markdown(
-        "<h1 style='margin-top:1.5rem;'>Choose your language</h1>",
-        unsafe_allow_html=True,
-    )
-
-    st.radio(
-        "",
-        ["English"],
-        index=0,
-        key="lang_choice"
-    )
-
-    st.markdown("")  # small spacing
-
-    if st.button("Continue →"):
-        goto("address_entry")
-
-# -------------------------------------------------------
 # PAGE 2 — ENTER ADDRESSES
 # -------------------------------------------------------
-
 def page_address_entry():
+
     st.title("Project Sites — Addresses")
 
     if st.button("+ Add another address"):
@@ -256,81 +247,70 @@ def page_address_entry():
     if st.button("Save & continue →"):
         for e in st.session_state["addresses"]:
             if e["address"].strip() == "" or e["canton"].strip() == "":
-                st.error("Each site must have an address and canton.")
+                st.error("Each site must have an address and a canton.")
                 return
         st.session_state["current_index"] = 0
         goto("questions")
 
     back_button("lang")
 
-# -------------------------------------------------------
-# PAGE 3 — QUESTIONS (ONE PAGE PER ADDRESS)
-# -------------------------------------------------------
 
+# -------------------------------------------------------
+# PAGE 3 — QUESTIONS
+# -------------------------------------------------------
 def page_questions():
+
     idx = st.session_state["current_index"]
     site = st.session_state["addresses"][idx]
+    prefix = f"a{idx}_"
 
     address = site["address"]
     canton = site["canton"]
-    prefix = f"a{idx}_"
 
     st.title(f"Site Evaluation — {address} ({canton})")
 
-    # OWNER TYPE
     owner_type = st.radio(
-        """### Owner type  
-Choose the profile that best describes the site owner.""",
+        "### Owner type",
         [
-            "3 — Public / institutional / large groups (very low cost of capital)",
+            "3 — Public / institutional / large groups",
             "2 — Standard commercial owner",
-            "1 — Private individual or SME (higher financing constraints)",
+            "1 — Private individual or SME",
         ],
         key=prefix + "owner"
     )
 
-    # ESG
     esg = st.radio(
-        """### ESG visibility  
-Is the owner known to be engaged in sustainability topics?""",
+        "### ESG visibility",
         ["Yes", "IDK", "No"],
         key=prefix + "esg"
     )
 
     st.markdown("### Electricity consumption profile")
 
-    # DAYTIME %
     daytime = st.slider(
-        """Approximate share of yearly electricity consumed between **08:00–18:00**  
-Higher daytime load increases the site's solar attractiveness.""",
+        "Share of yearly electricity consumed between 08:00–18:00",
         0, 100, 60,
         key=prefix + "daytime"
     )
 
-    # SPEND
     spend = st.radio(
-        """Estimated **annual electricity spend (CHF)**  
-Choose the bracket that best matches the site's yearly cost.""",
+        "Estimated annual electricity spend (CHF)",
         ["<100k", "100–300k", "300–800k", ">800k"],
         key=prefix + "spend"
     )
 
-    # SEASONALITY
     season = st.radio(
-        """How strong is the **seasonal variation** of electricity use?  
-High seasonality reduces self-consumption.""",
+        "Seasonal variation of electricity use",
         ["Low (±10%)", "Moderate (±10–25%)", "High (>25%)"],
         key=prefix + "season"
     )
 
-    # 24/7
     loads = st.radio(
-        """Does the site operate **24/7 loads** (cold rooms, servers, critical processes)?""",
+        "24/7 loads?",
         ["Yes", "No"],
         key=prefix + "247"
     )
 
-    # Save results
     st.session_state["answers"][idx] = {
         "owner_type": owner_type,
         "esg": esg,
@@ -341,7 +321,6 @@ High seasonality reduces self-consumption.""",
         "roof_score": compute_roof_score(site["roof_area"]),
     }
 
-    # NAVIGATION
     st.markdown("---")
     c1, c2 = st.columns(2)
 
@@ -355,20 +334,21 @@ High seasonality reduces self-consumption.""",
         else:
             goto("results")
 
+
 # -------------------------------------------------------
 # PAGE 4 — RESULTS
 # -------------------------------------------------------
-
 def page_results():
+
     st.title("Final Results — Solar21 Evaluation")
 
     for idx, site in enumerate(st.session_state["addresses"]):
         a = st.session_state["answers"].get(idx, {})
         st.markdown(f"## {site['address']} ({site['canton']})")
-        st.write(f"**A1 – Roof score:** {a.get('roof_score')}")
-        st.write(f"**A2 – Owner type:** {a.get('owner_type')}")
-        st.write(f"**A3 – ESG visibility:** {a.get('esg')}")
-        st.write(f"**Annual spend bracket:** {a.get('spend')}")
+        st.write(f"**Roof score:** {a.get('roof_score')}")
+        st.write(f"**Owner type:** {a.get('owner_type')}")
+        st.write(f"**ESG:** {a.get('esg')}")
+        st.write(f"**Spend:** {a.get('spend')}")
         st.markdown("---")
 
     restart_button()
@@ -376,14 +356,11 @@ def page_results():
 # -------------------------------------------------------
 # ROUTER
 # -------------------------------------------------------
-
-page = st.session_state["page"]
-
-if page == "lang":
+if st.session_state["page"] == "lang":
     page_lang()
-elif page == "address_entry":
+elif st.session_state["page"] == "address_entry":
     page_address_entry()
-elif page == "questions":
+elif st.session_state["page"] == "questions":
     page_questions()
-elif page == "results":
+elif st.session_state["page"] == "results":
     page_results()
