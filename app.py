@@ -888,8 +888,11 @@ def page_results():
     for idx, site in enumerate(st.session_state["addresses"]):
         ans = st.session_state["answers"][idx]
         
+        # Recalculate roof score from the actual roof area
+        roof_score = compute_roof_score(site.get("roof_area"))
+        
         # Calculate the final score
-        final_score = compute_final_score(ans, ans["roof_score"])
+        final_score = compute_final_score(ans, roof_score)
         interpretation, recommendation, emoji = get_score_interpretation(final_score, L)
         
         st.markdown(f"## 📍 {site['address']} ({site['canton']})")
@@ -910,8 +913,8 @@ def page_results():
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write(f"**{TEXT['roof_score_label'][L]}:** {ans['roof_score']}/3")
-            if site['roof_area']:
+            st.write(f"**{TEXT['roof_score_label'][L]}:** {roof_score}/3")
+            if site.get('roof_area'):
                 st.write(f"*({TEXT['roof_area_label'][L]}: {site['roof_area']} m²)*")
             st.write(f"**{TEXT['owner_type_label'][L]}:** {ans['owner_type'].split('—')[0].strip()}")
             st.write(f"**{TEXT['esg_label'][L]}:** {ans['esg'].split('—')[0].strip()}")
