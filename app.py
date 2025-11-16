@@ -78,8 +78,54 @@ st.markdown("""
 
     /* Select boxes */
     [data-baseweb="select"] {
+        background-color: #ffffff !important;
+    }
+    
+    [data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        color: #1a1a1a !important;
         border: 2px solid #e0e0e0 !important;
         border-radius: 6px !important;
+    }
+    
+    /* Dropdown options */
+    [role="listbox"] {
+        background-color: #ffffff !important;
+    }
+    
+    [role="option"] {
+        background-color: #ffffff !important;
+        color: #1a1a1a !important;
+    }
+    
+    [role="option"]:hover {
+        background-color: #f0f0f0 !important;
+    }
+
+    /* Language selection cards */
+    .lang-card {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 0.5rem 0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .lang-card:hover {
+        border-color: #00FF40;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,255,64,0.2);
+    }
+    
+    .lang-card.selected {
+        background: #00FF40;
+        border-color: #00FF40;
+        color: #000;
     }
 
     /* Sliders */
@@ -103,18 +149,23 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# LOGO (centered) - Using emoji as placeholder
+# LOGO (centered)
 # -------------------------------------------------------
-st.markdown(
-    """
-    <div style="text-align:center; margin-bottom:40px;">
-        <div style="font-size: 80px; margin-bottom: 10px;">☀️</div>
-        <h1 style="color: #1a1a1a; margin: 0; font-size: 2.5rem;">Solar21</h1>
-        <p style="color: #666; font-size: 1.1rem;">Evaluation Tool</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    try:
+        st.image("Solar21app/solar21_logo.png", use_container_width=True)
+    except:
+        st.markdown(
+            """
+            <div style="text-align:center; margin-bottom:40px;">
+                <h1 style="color: #1a1a1a; margin: 0; font-size: 2.5rem;">Solar21</h1>
+                <p style="color: #666; font-size: 1.1rem;">Evaluation Tool</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+st.markdown("<br>", unsafe_allow_html=True)
 
 # -------------------------------------------------------
 # SESSION STATE INIT
@@ -232,29 +283,30 @@ def restart_button():
 # -------------------------------------------------------
 
 def page_lang():
-    st.markdown(f"<h2 style='text-align: center; color: #1a1a1a;'>{TEXT['lang_title']['en']}</h2>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align: center; color: #1a1a1a; font-size: 2rem; margin-bottom: 2rem;'>{TEXT['lang_title']['en']}</h2>", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Create language cards
+    col1, col2, col3 = st.columns([1, 3, 1])
     
     with col2:
-        lang = st.radio(
-            "",
-            ["🇬🇧 English", "🇫🇷 Français", "🇩🇪 Deutsch"],
-            index=0,
-            label_visibility="collapsed"
-        )
-
-        if lang == "🇬🇧 English":
+        # English
+        selected_class = "selected" if st.session_state.get("language") == "en" else ""
+        if st.button("🇬🇧 English", key="lang_en", use_container_width=True):
             st.session_state["language"] = "en"
-        elif lang == "🇫🇷 Français":
+        
+        # French
+        selected_class = "selected" if st.session_state.get("language") == "fr" else ""
+        if st.button("🇫🇷 Français", key="lang_fr", use_container_width=True):
             st.session_state["language"] = "fr"
-        else:
+        
+        # German
+        selected_class = "selected" if st.session_state.get("language") == "de" else ""
+        if st.button("🇩🇪 Deutsch", key="lang_de", use_container_width=True):
             st.session_state["language"] = "de"
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
         
-        if st.button(TEXT["continue"][st.session_state["language"]], use_container_width=True):
+        if st.button(TEXT["continue"][st.session_state["language"]], key="continue_lang", use_container_width=True):
             goto("address_entry")
 
 # -------------------------------------------------------
@@ -294,31 +346,15 @@ def page_address_entry():
             key=f"addr_{idx}"
         )
 
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            entry["canton"] = st.selectbox(
-                "Canton",
-                ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL",
-                 "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
-                index=0 if entry["canton"] == "" else
-                ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL","BS","TG","SO",
-                 "NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
-                key=f"canton_{idx}"
-            )
-        
-        with col2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button(f"🔍 {TEXT['fetch_data'][L]}", key=f"fetch_{idx}"):
-                with st.spinner("Fetching data..."):
-                    data = get_sonnendach_info(entry["address"])
-                    if data:
-                        entry["roof_area"] = data.get("roof_area")
-                        entry["roof_pitch"] = data.get("pitch")
-                        entry["roof_orientation"] = data.get("orientation")
-                        st.success("✓ Data loaded")
-                    else:
-                        st.error("Could not fetch rooftop data.")
+        entry["canton"] = st.selectbox(
+            "Canton",
+            ["", "ZH", "SG", "VD", "BE", "GE", "TI", "VS", "LU", "FR", "AG", "BL",
+             "BS", "TG", "SO", "NE", "SH", "ZG", "OW", "NW", "UR", "GL", "AI", "AR", "JU"],
+            index=0 if entry["canton"] == "" else
+            ["","ZH","SG","VD","BE","GE","TI","VS","LU","FR","AG","BL","BS","TG","SO",
+             "NE","SH","ZG","OW","NW","UR","GL","AI","AR","JU"].index(entry["canton"]),
+            key=f"canton_{idx}"
+        )
 
         if entry["roof_area"]:
             st.info(f"🏠 Rooftop area: **{entry['roof_area']} m²**")
@@ -326,6 +362,15 @@ def page_address_entry():
         st.markdown("---")
 
     if st.button(TEXT["save_continue"][L], use_container_width=True):
+        # Fetch rooftop data for all addresses before continuing
+        with st.spinner("Fetching rooftop data..."):
+            for idx, entry in enumerate(st.session_state["addresses"]):
+                if entry["address"] and entry["canton"] and not entry["roof_area"]:
+                    data = get_sonnendach_info(entry["address"])
+                    if data:
+                        entry["roof_area"] = data.get("roof_area")
+                        entry["roof_pitch"] = data.get("pitch")
+                        entry["roof_orientation"] = data.get("orientation")
         goto("questions")
 
 # -------------------------------------------------------
