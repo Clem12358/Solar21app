@@ -18,6 +18,20 @@ PRIMARY_DARK = "#000000"
 
 st.markdown(f"""
 <style>
+
+/* Force radio text to be fully black and opaque */
+.stRadio label {
+    color: #000000 !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
+}
+
+.stRadio div[role="radiogroup"] label {
+    color: #000000 !important;
+    opacity: 1 !important;
+}
+
+
 /* Hide sidebar */
 [data-testid="stSidebar"], [data-testid="stSidebarNav"] {{
     display: none !important;
@@ -102,20 +116,24 @@ input[type="radio"], input[type="range"] {{
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# LOGO (centered, visible)
+# LOGO (smaller & perfectly centered)
 # -------------------------------------------------------
 logo_path = Path(__file__).parent / "solar21_logo.png"
 
-if logo_path.exists():
-    col_l, col_c, col_r = st.columns([1, 2, 1])
-    with col_c:
-        st.image(str(logo_path), use_column_width=False, width=260)
-else:
-    # Fallback text if logo not found in the deployed folder
-    st.markdown(
-        f"<h2 style='text-align:center; color:{PRIMARY_DARK}; margin-top:0;'>Solar21 Evaluation Tool</h2>",
-        unsafe_allow_html=True,
-    )
+st.markdown(
+    f"""
+    <div style="
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    ">
+        <img src="solar21_logo.png" style="width:180px; height:auto;"/>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # -------------------------------------------------------
 # SESSION STATE INIT
