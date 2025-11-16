@@ -127,6 +127,13 @@ st.markdown("""
         border-color: #00FF40;
         color: #000;
     }
+    
+    /* Gray out non-selected language buttons */
+    .stButton>button[disabled] {
+        background-color: #f0f0f0 !important;
+        color: #999999 !important;
+        opacity: 0.6;
+    }
 
     /* Sliders */
     .stSlider {
@@ -151,11 +158,25 @@ st.markdown("""
 # -------------------------------------------------------
 # LOGO (centered)
 # -------------------------------------------------------
+import os
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    try:
-        st.image("Solar21app/solar21_logo.png", use_container_width=True)
-    except:
+    # Try multiple possible paths for the logo
+    possible_paths = [
+        "Solar21app/solar21_logo.png",
+        "solar21_logo.png",
+        "./solar21_logo.png",
+        "../solar21_logo.png"
+    ]
+    
+    logo_loaded = False
+    for path in possible_paths:
+        if os.path.exists(path):
+            st.image(path, use_container_width=True)
+            logo_loaded = True
+            break
+    
+    if not logo_loaded:
         st.markdown(
             """
             <div style="text-align:center; margin-bottom:40px;">
