@@ -691,6 +691,11 @@ def page_address_entry():
             rs = compute_roof_score(entry["roof_area"])
             st.info(f"🏠 Rooftop area used for scoring: **{entry['roof_area']} m²** (roof score: {rs}/3)")
 
+        # Debug: show raw Sonnendach response if available
+        if entry.get("sonnendach_raw") is not None:
+            with st.expander("Debug Sonnendach data", expanded=False):
+                st.json(entry["sonnendach_raw"])
+
         st.markdown("---")
 
     # Create a placeholder for the loading message
@@ -707,7 +712,12 @@ def page_address_entry():
             for idx, entry in enumerate(st.session_state["addresses"]):
                 if entry["address"] and entry["canton"] and not entry["roof_area"]:
                     data = get_sonnendach_info(entry["address"])
+
+                    # Store raw data for debugging so we can inspect it on the address page
+                    entry["sonnendach_raw"] = data
+
                     if data:
+                        # TODO: adjust these keys once we see the exact Sonnendach structure
                         entry["roof_area"] = data.get("roof_area")
                         entry["roof_pitch"] = data.get("pitch")
                         entry["roof_orientation"] = data.get("orientation")
