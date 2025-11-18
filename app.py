@@ -568,13 +568,16 @@ def restart_button():
 # -------------------------------------------------------
 
 def page_lang():
-    st.markdown(f"<h2 style='text-align: center; color: #1a1a1a; font-size: 2rem; margin-bottom: 2rem;'>{TEXT['lang_title']['en']}</h2>", unsafe_allow_html=True)
+    st.markdown(
+        f"<h2 style='text-align: center; color: #1a1a1a; font-size: 2rem; margin-bottom: 2rem;'>{TEXT['lang_title']['en']}</h2>",
+        unsafe_allow_html=True,
+    )
 
     # Initialize selected language if not set
     if "selected_lang_temp" not in st.session_state:
         st.session_state["selected_lang_temp"] = None
 
-    # Create language cards
+    # Create language buttons
     col1, col2, col3 = st.columns([1, 3, 1])
     
     with col2:
@@ -610,7 +613,12 @@ def page_lang():
         
         # Only enable continue if a language is selected
         if st.session_state["selected_lang_temp"]:
-            if st.button(TEXT["continue"][st.session_state["language"]], key="continue_lang", use_container_width=True):
+            if st.button(
+                TEXT["continue"][st.session_state["language"]],
+                key="continue_lang",
+                use_container_width=True,
+                type="primary",  # make Continue green like selected language
+            ):
                 goto("address_entry")
                 st.rerun()
 
