@@ -718,9 +718,9 @@ def page_address_entry():
 
                     if data:
                         # TODO: adjust these keys once we see the exact Sonnendach structure
-                        entry["roof_area"] = data.get("roof_area")
-                        entry["roof_pitch"] = data.get("pitch")
-                        entry["roof_orientation"] = data.get("orientation")
+                        entry["roof_area"] = data.get("surface_area_m2")
+                        entry["roof_pitch"] = data.get("roof_pitch_deg")
+                        entry["roof_orientation"] = data.get("roof_heading_deg")
                     else:
                         all_success = False
         
@@ -745,6 +745,15 @@ def page_questions():
     L = st.session_state["language"]
     idx = st.session_state["current_index"]
     site = st.session_state["addresses"][idx]
+
+    # Debug info: show roof area + Sonnendach raw data on the questions page as well
+    if site.get("roof_area") is not None:
+        rs = compute_roof_score(site["roof_area"])
+        st.info(f"🏠 Rooftop area used for scoring: **{site['roof_area']} m²** (roof score: {rs}/3)")
+
+    if site.get("sonnendach_raw") is not None:
+        with st.expander("Debug roof data", expanded=False):
+            st.json(site["sonnendach_raw"])
 
     st.title(f"{TEXT['questions_title'][L]}")
     st.markdown(f"**📍 {site['address']} ({site['canton']})**")
