@@ -558,7 +558,7 @@ def get_score_interpretation(score, lang="en"):
 
 def restart_button():
     st.markdown("---")
-    if st.button(TEXT["restart"][st.session_state["language"]]):
+    if st.button(TEXT["restart"][st.session_state["language"]], type="primary"):
         st.session_state.clear()
         init_state()
         st.rerun()
@@ -634,7 +634,7 @@ def page_address_entry():
 
     col_add, col_space = st.columns([1, 3])
     with col_add:
-        if st.button(TEXT["add_site"][L]):
+        if st.button(TEXT["add_site"][L], type="primary"):
             st.session_state["addresses"].append({
                 "address": "",
                 "canton": "",
@@ -688,7 +688,7 @@ def page_address_entry():
     # Create a placeholder for the loading message
     status_placeholder = st.empty()
     
-    if st.button(TEXT["save_continue"][L], use_container_width=True):
+    if st.button(TEXT["save_continue"][L], use_container_width=True, type="primary"):
         # Show loading status
         with status_placeholder.container():
             st.info("🔄 Fetching rooftop data, please wait...")
@@ -895,7 +895,7 @@ def page_questions():
             st.session_state["current_index"] -= 1
             st.rerun()
 
-    if c2.button(TEXT["continue"][L], use_container_width=True):
+    if c2.button(TEXT["continue"][L], use_container_width=True, type="primary"):
         if idx < len(st.session_state["addresses"]) - 1:
             st.session_state["current_index"] += 1
             st.rerun()
