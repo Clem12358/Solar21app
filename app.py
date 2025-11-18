@@ -61,6 +61,19 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
         transform: translateY(-1px) !important;
     }
+    
+    /* Exception: secondary buttons (only for language selection) */
+    .stButton>button[kind="secondary"] {
+        background-color: #f5f5f5 !important;
+        color: #999999 !important;
+        opacity: 0.5 !important;
+        border: 2px solid #e0e0e0 !important;
+    }
+    
+    .stButton>button[kind="secondary"]:hover {
+        background-color: #f5f5f5 !important;
+        transform: none !important;
+    }
 
     /* Text inputs */
     input[type="text"] {
@@ -139,6 +152,12 @@ st.markdown("""
     [data-testid="stVerticalBlock"]:has(button[kind="secondary"]) button[kind="secondary"]:hover {
         background-color: #f5f5f5 !important;
         transform: none !important;
+    }
+    
+    /* Keep primary buttons green */
+    .stButton>button[kind="primary"] {
+        background-color: #00FF40 !important;
+        color: #000000 !important;
     }
 
     /* Sliders */
@@ -424,6 +443,16 @@ TEXT = {
         }
     },
     "restart": {"en": "Start again", "fr": "Recommencer", "de": "Neu starten"},
+    "composite_score": {
+        "en": "Overall Composite Score",
+        "fr": "Score composite global",
+        "de": "Gesamtbewertung"
+    },
+    "composite_desc": {
+        "en": "Average across all sites",
+        "fr": "Moyenne de tous les sites",
+        "de": "Durchschnitt aller Standorte"
+    },
 }
 
 # -------------------------------------------------------
@@ -885,6 +914,9 @@ def page_results():
     st.title(TEXT["results_title"][L])
     st.markdown("---")
 
+    # Calculate all scores first
+    all_scores = []
+    
     for idx, site in enumerate(st.session_state["addresses"]):
         ans = st.session_state["answers"][idx]
         
@@ -893,6 +925,7 @@ def page_results():
         
         # Calculate the final score
         final_score = compute_final_score(ans, roof_score)
+        all_scores.append(final_score)
         interpretation, recommendation, emoji = get_score_interpretation(final_score, L)
         
         st.markdown(f"## 📍 {site['address']} ({site['canton']})")
@@ -924,6 +957,25 @@ def page_results():
             st.write(f"**{TEXT['daytime_label'][L]}:** {ans['daytime']}%")
             st.write(f"**{TEXT['season_label'][L]}:** {ans['season'].split('—')[0].strip()}")
             st.write(f"**{TEXT['loads_label'][L]}:** {ans['loads'].split('—')[0].strip()}")
+        
+        st.markdown("---")
+    
+    # If multiple addresses, show composite score
+    if len(st.session_state["addresses"]) > 1:
+        composite_score = sum(all_scores) / len(all_scores)
+        composite_interpretation, composite_recommendation, composite_emoji = get_score_interpretation(composite_score, L)
+        
+        st.markdown(f"## 🏢 {TEXT['composite_score'][L]}")
+        st.caption(TEXT['composite_desc'][L])
+        
+        col_score, col_interp = st.columns([1, 2])
+        
+        with col_score:
+            st.metric(TEXT["score_label"][L], f"{round(composite_score, 1)}/100")
+        
+        with col_interp:
+            st.markdown(f"### {composite_emoji} {composite_interpretation}")
+            st.write(f"**{TEXT['recommendation_label'][L]}:** {composite_recommendation}")
         
         st.markdown("---")
 
