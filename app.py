@@ -43,8 +43,11 @@ st.markdown("""
         color: #1a1a1a !important;
     }
 
-    /* Solar21 green buttons */
-    .stButton>button {
+    /* Solar21 green buttons - DEFAULT for ALL buttons */
+    .stButton > button,
+    .stButton > button[kind="primary"],
+    button[data-testid="baseButton-primary"],
+    button[data-testid="baseButton-secondary"] {
         background-color: #00FF40 !important;
         color: #000000 !important;
         font-weight: 600 !important;
@@ -56,23 +59,27 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
 
-    .stButton>button:hover {
+    .stButton > button:hover,
+    .stButton > button[kind="primary"]:hover,
+    button[data-testid="baseButton-primary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover {
         background-color: #00DD38 !important;
         box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
         transform: translateY(-1px) !important;
     }
     
-    /* Exception: secondary buttons (only for language selection) */
-    .stButton>button[kind="secondary"] {
+    /* EXCEPTION: Gray out non-selected language buttons ONLY */
+    .stButton > button[kind="secondary"] {
         background-color: #f5f5f5 !important;
         color: #999999 !important;
         opacity: 0.5 !important;
         border: 2px solid #e0e0e0 !important;
     }
     
-    .stButton>button[kind="secondary"]:hover {
+    .stButton > button[kind="secondary"]:hover {
         background-color: #f5f5f5 !important;
         transform: none !important;
+        box-shadow: none !important;
     }
 
     /* Text inputs */
@@ -141,24 +148,7 @@ st.markdown("""
         color: #000;
     }
     
-    /* Gray out non-selected language buttons */
-    [data-testid="stVerticalBlock"]:has(button[kind="secondary"]) button[kind="secondary"] {
-        background-color: #f5f5f5 !important;
-        color: #999999 !important;
-        opacity: 0.5 !important;
-        border: 2px solid #e0e0e0 !important;
-    }
-    
-    [data-testid="stVerticalBlock"]:has(button[kind="secondary"]) button[kind="secondary"]:hover {
-        background-color: #f5f5f5 !important;
-        transform: none !important;
-    }
-    
-    /* Keep primary buttons green */
-    .stButton>button[kind="primary"] {
-        background-color: #00FF40 !important;
-        color: #000000 !important;
-    }
+
 
     /* Sliders */
     .stSlider {
