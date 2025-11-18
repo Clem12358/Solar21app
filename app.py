@@ -450,18 +450,25 @@ TEXT = {
 # -------------------------------------------------------
 
 def compute_roof_score(area):
-    """
-    Calculate roof score based on usable area in m²
+    """Calculate roof score based on usable area in m²
     > 1000 m² = 3
-    500-1000 m² = 2
+    500–1000 m² = 2
     < 500 m² = 1
-    Missing data = 0
+    Missing or invalid data = 0
     """
-    if area is None or area == 0:
+    if area is None:
         return 0
-    if area > 1000:
+    # Be robust if Sonnendach returns a string
+    try:
+        area_val = float(area)
+    except (TypeError, ValueError):
+        return 0
+
+    if area_val <= 0:
+        return 0
+    if area_val > 1000:
         return 3
-    elif area >= 500:
+    elif area_val >= 500:
         return 2
     else:
         return 1
@@ -680,8 +687,9 @@ def page_address_entry():
             key=f"canton_{idx}"
         )
 
-        if entry["roof_area"]:
-            st.info(f"🏠 Rooftop area: **{entry['roof_area']} m²**")
+        if entry["roof_area"] is not None:
+            rs = compute_roof_score(entry["roof_area"])
+            st.info(f"🏠 Rooftop area used for scoring: **{entry['roof_area']} m²** (roof score: {rs}/3)")
 
         st.markdown("---")
 
