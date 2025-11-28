@@ -232,7 +232,7 @@ def _load_weights_from_disk():
             structure = float(data.get("structure", DEFAULT_WEIGHTS["structure"]))
             consumption = float(data.get("consumption", DEFAULT_WEIGHTS["consumption"]))
             total = structure + consumption
-
+            
             if total > 0:
                 return {
                     "structure": structure / total,
