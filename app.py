@@ -1,3 +1,7 @@
+import json
+import os
+from pathlib import Path
+
 import streamlit as st
 from modules.sonnendach import get_sonnendach_info
 
@@ -173,7 +177,6 @@ st.markdown("""
 # -------------------------------------------------------
 # LOGO (centered)
 # -------------------------------------------------------
-import os
 
 # Center the logo using columns
 logo_col1, logo_col2, logo_col3 = st.columns([1, 1, 1])
@@ -215,6 +218,35 @@ st.markdown("<br>", unsafe_allow_html=True)
 def goto(page):
     st.session_state["page"] = page
 
+WEIGHTS_FILE = Path("weights.json")
+DEFAULT_WEIGHTS = {"structure": 0.40, "consumption": 0.60}
+EMPLOYEE_PASSWORD = "28102025"
+
+
+def _load_weights_from_disk():
+    if WEIGHTS_FILE.exists():
+        try:
+            with WEIGHTS_FILE.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+
+            structure = float(data.get("structure", DEFAULT_WEIGHTS["structure"]))
+            consumption = float(data.get("consumption", DEFAULT_WEIGHTS["consumption"]))
+            total = structure + consumption
+
+            if total > 0:
+                return {
+                    "structure": structure / total,
+                    "consumption": consumption / total,
+                }
+        except Exception:
+            pass
+
+    return DEFAULT_WEIGHTS.copy()
+
+
+def _persist_weights(weights):
+    WEIGHTS_FILE.write_text(json.dumps(weights, indent=2), encoding="utf-8")
+
 def init_state():
     defaults = {
         "page": "lang",
@@ -222,6 +254,8 @@ def init_state():
         "addresses": [],
         "current_index": 0,
         "answers": {},
+        "weights": _load_weights_from_disk(),
+        "employee_authenticated": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -240,12 +274,82 @@ TEXT = {
         "de": "Wählen Sie Ihre Sprache"
     },
     "continue": {"en": "Continue →", "fr": "Continuer →", "de": "Weiter →"},
+    "role_title": {
+        "en": "Who are you?",
+        "fr": "Qui êtes-vous ?",
+        "de": "Wer sind Sie?",
+    },
+    "partner_option": {
+        "en": "I am a partner of Solar21",
+        "fr": "Je suis un partenaire de Solar21",
+        "de": "Ich bin Partner von Solar21",
+    },
+    "employee_option": {
+        "en": "I am an employee of Solar21",
+        "fr": "Je suis employé(e) de Solar21",
+        "de": "Ich bin Mitarbeiter*in von Solar21",
+    },
+    "employee_password": {
+        "en": "Employee password",
+        "fr": "Mot de passe employé",
+        "de": "Mitarbeiter-Passwort",
+    },
+    "employee_password_error": {
+        "en": "Incorrect password. Please try again.",
+        "fr": "Mot de passe incorrect. Veuillez réessayer.",
+        "de": "Falsches Passwort. Bitte erneut versuchen.",
+    },
+    "weights_title": {
+        "en": "Adjust calculation weights",
+        "fr": "Ajuster les pondérations du calcul",
+        "de": "Berechnungsgewichte anpassen",
+    },
+    "weights_subtext": {
+        "en": "These weights apply to everyone using this shared app once saved.",
+        "fr": "Ces pondérations s'appliquent à tous ceux qui utilisent cette application partagée une fois sauvegardées.",
+        "de": "Diese Gewichte gelten nach dem Speichern für alle, die diese gemeinsame App nutzen.",
+    },
+    "weights_pull_hint": {
+        "en": "If colleagues already downloaded a local copy, they must pull/download the updated app from the same location again to receive these changes.",
+        "fr": "Si des collègues ont déjà téléchargé une copie locale, ils doivent récupérer/télécharger à nouveau l'application mise à jour depuis le même emplacement pour recevoir ces changements.",
+        "de": "Haben Kolleginnen oder Kollegen bereits eine lokale Kopie heruntergeladen, müssen sie die aktualisierte App erneut vom gleichen Ort beziehen, um diese Änderungen zu erhalten.",
+    },
+    "structure_weight": {
+        "en": "Structure weight (roof + ownership + ESG)",
+        "fr": "Poids de la structure (toit + propriétaire + ESG)",
+        "de": "Strukturgewicht (Dach + Eigentümer + ESG)",
+    },
+    "consumption_weight": {
+        "en": "Consumption weight (spend + load profile)",
+        "fr": "Poids de la consommation (dépenses + profil de charge)",
+        "de": "Verbrauchsgewicht (Kosten + Lastprofil)",
+    },
+    "save_weights": {
+        "en": "Save weights for all users",
+        "fr": "Enregistrer les pondérations pour tous",
+        "de": "Gewichte für alle speichern",
+    },
+    "weights_saved": {
+        "en": "Weights saved for all users.",
+        "fr": "Pondérations enregistrées pour tous les utilisateurs.",
+        "de": "Gewichte für alle Nutzer gespeichert.",
+    },
+    "proceed": {
+        "en": "Proceed →",
+        "fr": "Continuer →",
+        "de": "Weiter →",
+    },
     "add_site": {"en": "+ Add another address", "fr": "+ Ajouter une adresse", "de": "+ Eine Adresse hinzufügen"},
     "remove_site": {"en": "🗑️ Remove", "fr": "🗑️ Supprimer", "de": "🗑️ Entfernen"},
     "address_title": {
         "en": "Project Sites — Addresses",
         "fr": "Sites du projet — Adresses",
         "de": "Projektstandorte — Adressen"
+    },
+    "roof_data_local_hint": {
+        "en": "Automatic roof sizing only works when you run the app locally with Chrome/Chromedriver installed. If you're using the hosted web version, please fill the rooftop values manually below.",
+        "fr": "Le dimensionnement automatique du toit fonctionne uniquement si vous exécutez l'application en local avec Chrome/Chromedriver installé. Si vous utilisez la version web hébergée, veuillez saisir manuellement les valeurs du toit ci-dessous.",
+        "de": "Die automatische Dachgrößen-Berechnung funktioniert nur, wenn Sie die App lokal mit installiertem Chrome/Chromedriver ausführen. Wenn Sie die gehostete Webversion nutzen, tragen Sie bitte die Dachwerte unten manuell ein.",
     },
     "full_address": {
         "en": "Full address",
@@ -258,6 +362,36 @@ TEXT = {
         "de": "Dachdaten abrufen"
     },
     "save_continue": {"en": "Save & continue →", "fr": "Enregistrer & continuer →", "de": "Speichern & weiter →"},
+    "manual_roof_prompt": {
+        "en": "If rooftop data cannot be fetched automatically, enter it manually:",
+        "fr": "Si les données du toit ne peuvent pas être récupérées automatiquement, saisissez-les manuellement :",
+        "de": "Falls die Dachdaten nicht automatisch abgerufen werden können, geben Sie sie bitte manuell ein:",
+    },
+    "manual_roof_hint": {
+        "en": "You can also approximate these values on <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a>.",
+        "fr": "Vous pouvez également estimer ces valeurs sur <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a>.",
+        "de": "Sie können diese Werte auch auf <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a> abschätzen.",
+    },
+    "roof_area_input": {
+        "en": "Rooftop area (m²)",
+        "fr": "Surface du toit (m²)",
+        "de": "Dachfläche (m²)",
+    },
+    "roof_pitch_input": {
+        "en": "Roof pitch (°)",
+        "fr": "Inclinaison du toit (°)",
+        "de": "Dachneigung (°)",
+    },
+    "roof_orientation_input": {
+        "en": "Roof orientation (°)",
+        "fr": "Orientation du toit (°)",
+        "de": "Dachausrichtung (°)",
+    },
+    "manual_fill_warning": {
+        "en": "Automatic lookup failed. Please fill the rooftop values manually, then click Save & continue again.",
+        "fr": "La récupération automatique a échoué. Merci de renseigner manuellement les valeurs du toit, puis de cliquer à nouveau sur Enregistrer & continuer.",
+        "de": "Der automatische Abruf ist fehlgeschlagen. Bitte füllen Sie die Dachwerte manuell aus und klicken Sie dann erneut auf Speichern & weiter.",
+    },
     "questions_title": {
         "en": "Site Evaluation",
         "fr": "Évaluation du site",
@@ -445,6 +579,80 @@ TEXT = {
     },
 }
 
+# All question options, defined once to avoid recreating per render
+QUESTION_OPTIONS = {
+    "owner": {
+        "en": [
+            "Public entity or large institutional owner — Hospitals, municipalities, cantonal buildings, universities, major corporates. Typically low cost of capital and stable approval processes.",
+            "Standard commercial owner — Regular private companies, logistics firms, retail centers, property companies.",
+            "Private individual or small SME — Smaller budgets, higher financing constraints, usually slower decision cycles.",
+        ],
+        "fr": [
+            "Entité publique ou grand propriétaire institutionnel — Hôpitaux, municipalités, bâtiments cantonaux, universités, grandes entreprises. Généralement faible coût du capital et processus d'approbation stables.",
+            "Propriétaire commercial standard — Entreprises privées régulières, entreprises de logistique, centres commerciaux, sociétés immobilières.",
+            "Particulier ou petite PME — Budgets plus petits, contraintes de financement plus élevées, cycles de décision généralement plus lents.",
+        ],
+        "de": [
+            "Öffentliche Einrichtung oder großer institutioneller Eigentümer — Krankenhäuser, Gemeinden, Kantonsgebäude, Universitäten, große Unternehmen. Typischerweise niedrige Kapitalkosten und stabile Genehmigungsverfahren.",
+            "Standard-Gewerbeinhaber — Reguläre Privatunternehmen, Logistikunternehmen, Einkaufszentren, Immobiliengesellschaften.",
+            "Privatperson oder kleines KMU — Kleinere Budgets, höhere Finanzierungsbeschränkungen, in der Regel langsamere Entscheidungszyklen.",
+        ],
+    },
+    "esg": {
+        "en": [
+            "Yes — sustainability is clearly part of their identity (Website, annual reports, labels, certifications, public commitments)",
+            "Not sure — no clear signal (No obvious information available)",
+            "No — sustainability is not a visible priority (No ESG communication, purely cost-driven decision-making)",
+        ],
+        "fr": [
+            "Oui — la durabilité fait clairement partie de leur identité (Site web, rapports annuels, labels, certifications, engagements publics)",
+            "Incertain — aucun signal clair (Aucune information évidente disponible)",
+            "Non — la durabilité n'est pas une priorité visible (Aucune communication ESG, décisions purement basées sur les coûts)",
+        ],
+        "de": [
+            "Ja — Nachhaltigkeit ist eindeutig Teil ihrer Identität (Website, Jahresberichte, Labels, Zertifizierungen, öffentliche Verpflichtungen)",
+            "Unsicher — kein klares Signal (Keine offensichtlichen Informationen verfügbar)",
+            "Nein — Nachhaltigkeit ist keine sichtbare Priorität (Keine ESG-Kommunikation, rein kostenorientierte Entscheidungsfindung)",
+        ],
+    },
+    "spend": {
+        "en": ["Below 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Above 800k CHF"],
+        "fr": ["Moins de 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Plus de 800k CHF"],
+        "de": ["Unter 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Über 800k CHF"],
+    },
+    "season": {
+        "en": [
+            "Low seasonal variation (±10%) — Consumption stays stable across the year",
+            "Moderate variation (±10–25%) — Some seasonal differences (e.g., cooling or heating loads)",
+            "High variation (>25%) — Strong seasonality, big differences between summer and winter",
+        ],
+        "fr": [
+            "Faible variation saisonnière (±10%) — La consommation reste stable tout au long de l'année",
+            "Variation modérée (±10–25%) — Quelques différences saisonnières (par ex. charges de refroidissement ou de chauffage)",
+            "Forte variation (>25%) — Forte saisonnalité, grandes différences entre été et hiver",
+        ],
+        "de": [
+            "Geringe saisonale Schwankung (±10%) — Verbrauch bleibt über das Jahr stabil",
+            "Mäßige Schwankung (±10–25%) — Einige saisonale Unterschiede (z.B. Kühl- oder Heizlasten)",
+            "Hohe Schwankung (>25%) — Starke Saisonalität, große Unterschiede zwischen Sommer und Winter",
+        ],
+    },
+    "loads": {
+        "en": [
+            "Yes — important 24/7 loads (Cold storage, server rooms, industrial baseload, data centers)",
+            "No — mainly daytime or irregular loads",
+        ],
+        "fr": [
+            "Oui — charges importantes 24h/24 7j/7 (Stockage frigorifique, salles de serveurs, charge de base industrielle, centres de données)",
+            "Non — principalement charges diurnes ou irrégulières",
+        ],
+        "de": [
+            "Ja — wichtige 24/7-Lasten (Kühlräume, Serverräume, industrielle Grundlast, Rechenzentren)",
+            "Nein — hauptsächlich Tages- oder unregelmäßige Lasten",
+        ],
+    },
+}
+
 # -------------------------------------------------------
 # HELPERS
 # -------------------------------------------------------
@@ -542,8 +750,19 @@ def compute_final_score(answers, roof_score):
     A_norm = A_total / 9
     B_norm = B_total / 13  # max is 13 (4+3+3+3)
     
-    # Apply weights: 40% structure (A), 60% consumption (B)
-    final_score = 0.40 * A_norm + 0.60 * B_norm
+    weights = st.session_state.get("weights", DEFAULT_WEIGHTS)
+    structure_weight = weights.get("structure", DEFAULT_WEIGHTS["structure"])
+    consumption_weight = weights.get("consumption", DEFAULT_WEIGHTS["consumption"])
+
+    total_weight = structure_weight + consumption_weight
+    if total_weight > 0:
+        structure_weight /= total_weight
+        consumption_weight /= total_weight
+    else:
+        structure_weight = DEFAULT_WEIGHTS["structure"]
+        consumption_weight = DEFAULT_WEIGHTS["consumption"]
+
+    final_score = structure_weight * A_norm + consumption_weight * B_norm
     
     # Convert to 0-100 scale
     final_score_100 = final_score * 100
@@ -626,11 +845,80 @@ def page_lang():
                 use_container_width=True,
                 type="primary",  # make Continue green like selected language
             ):
-                goto("address_entry")
+                goto("role")
                 st.rerun()
 
 # -------------------------------------------------------
-# PAGE 2 — ENTER ADDRESSES
+# PAGE 2 — ROLE SELECTION
+# -------------------------------------------------------
+
+def page_role_selection():
+    L = st.session_state["language"]
+    st.title(TEXT["role_title"][L])
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    choice = st.radio(
+        "",
+        [TEXT["partner_option"][L], TEXT["employee_option"][L]],
+        key="role_choice",
+        label_visibility="collapsed",
+    )
+
+    if choice == TEXT["partner_option"][L]:
+        st.session_state["employee_authenticated"] = False
+        if st.button(TEXT["proceed"][L], type="primary", use_container_width=True):
+            goto("address_entry")
+            st.rerun()
+        return
+
+    # Employee branch
+    pwd = st.text_input(
+        TEXT["employee_password"][L],
+        type="password",
+        key="employee_password_input",
+    )
+
+    if pwd:
+        if pwd == EMPLOYEE_PASSWORD:
+            st.session_state["employee_authenticated"] = True
+        else:
+            st.session_state["employee_authenticated"] = False
+            st.error(TEXT["employee_password_error"][L])
+
+    if st.session_state.get("employee_authenticated"):
+        st.success(TEXT["weights_subtext"][L])
+        st.info(TEXT["weights_pull_hint"][L])
+        st.markdown(f"### {TEXT['weights_title'][L]}")
+
+        structure_default = int(round(st.session_state["weights"]["structure"] * 100))
+        structure_pct = st.slider(
+            TEXT["structure_weight"][L],
+            0,
+            100,
+            structure_default,
+            step=5,
+            format="%d%%",
+        )
+
+        consumption_pct = 100 - structure_pct
+        st.write(f"{TEXT['consumption_weight'][L]}: **{consumption_pct}%**")
+
+        if st.button(TEXT["save_weights"][L], type="primary", use_container_width=True):
+            new_weights = {
+                "structure": structure_pct / 100,
+                "consumption": consumption_pct / 100,
+            }
+            st.session_state["weights"] = new_weights
+            _persist_weights(new_weights)
+            st.success(f"✅ {TEXT['weights_saved'][L]}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button(TEXT["proceed"][L], use_container_width=True):
+            goto("address_entry")
+            st.rerun()
+
+# -------------------------------------------------------
+# PAGE 3 — ENTER ADDRESSES
 # -------------------------------------------------------
 
 def page_address_entry():
@@ -638,6 +926,8 @@ def page_address_entry():
 
     st.title(TEXT["address_title"][L])
     st.markdown("<br>", unsafe_allow_html=True)
+
+    st.warning(TEXT["roof_data_local_hint"][L])
 
     col_add, col_space = st.columns([1, 3])
     with col_add:
@@ -668,7 +958,17 @@ def page_address_entry():
             if len(st.session_state["addresses"]) > 1:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button(TEXT["remove_site"][L], key=f"remove_{idx}"):
+                    answers = st.session_state.get("answers", {})
+                    if idx in answers:
+                        del answers[idx]
+                    st.session_state["answers"] = {
+                        (i if i < idx else i - 1): ans
+                        for i, ans in answers.items()
+                        if i != idx
+                    }
                     st.session_state["addresses"].pop(idx)
+                    if st.session_state.get("current_index", 0) >= len(st.session_state["addresses"]):
+                        st.session_state["current_index"] = max(len(st.session_state["addresses"]) - 1, 0)
                     st.rerun()
 
         entry["address"] = st.text_input(
@@ -687,14 +987,48 @@ def page_address_entry():
             key=f"canton_{idx}"
         )
 
-        if entry["roof_area"] is not None:
-            rs = compute_roof_score(entry["roof_area"])
-            st.info(f"🏠 Rooftop area used for scoring: **{entry['roof_area']} m²** (roof score: {rs}/3)")
-
         # Debug: show raw Sonnendach response if available
         if entry.get("sonnendach_raw") is not None:
             with st.expander("Debug Sonnendach data", expanded=False):
                 st.json(entry["sonnendach_raw"])
+
+        st.markdown(f"**{TEXT['manual_roof_prompt'][L]}**")
+        st.caption(TEXT["roof_data_local_hint"][L])
+        st.caption(TEXT["manual_roof_hint"][L], unsafe_allow_html=True)
+        col_area, col_pitch, col_orient = st.columns(3)
+        area_val = col_area.number_input(
+            TEXT["roof_area_input"][L],
+            min_value=0.0,
+            value=float(entry["roof_area"]) if entry["roof_area"] is not None else 0.0,
+            step=1.0,
+            key=f"roof_area_{idx}",
+        )
+        pitch_val = col_pitch.number_input(
+            TEXT["roof_pitch_input"][L],
+            min_value=0.0,
+            max_value=90.0,
+            value=float(entry["roof_pitch"]) if entry["roof_pitch"] is not None else 0.0,
+            step=1.0,
+            key=f"roof_pitch_{idx}",
+        )
+        orient_val = col_orient.number_input(
+            TEXT["roof_orientation_input"][L],
+            min_value=0.0,
+            max_value=360.0,
+            value=float(entry["roof_orientation"]) if entry["roof_orientation"] is not None else 0.0,
+            step=5.0,
+            key=f"roof_orientation_{idx}",
+        )
+
+        entry["roof_area"] = area_val if area_val > 0 else None
+        entry["roof_pitch"] = pitch_val if pitch_val > 0 else None
+        entry["roof_orientation"] = orient_val if orient_val > 0 else None
+
+        if entry["roof_area"] is not None:
+            rs = compute_roof_score(entry["roof_area"])
+            st.info(
+                f"🏠 Rooftop area used for scoring: **{entry['roof_area']} m²** (roof score: {rs}/3)"
+            )
 
         st.markdown("---")
 
@@ -705,9 +1039,10 @@ def page_address_entry():
         # Show loading status
         with status_placeholder.container():
             st.info("🔄 Fetching rooftop data, please wait...")
-        
+
         # Fetch rooftop data for all addresses before continuing
         all_success = True
+        lookup_errors = []
         with st.spinner(""):
             for idx, entry in enumerate(st.session_state["addresses"]):
                 if entry["address"] and entry["canton"] and not entry["roof_area"]:
@@ -721,9 +1056,13 @@ def page_address_entry():
                         entry["roof_area"] = data.get("surface_area_m2")
                         entry["roof_pitch"] = data.get("roof_pitch_deg")
                         entry["roof_orientation"] = data.get("roof_heading_deg")
-                    else:
+                        if data.get("error"):
+                            lookup_errors.append(data.get("error"))
+                    if entry.get("roof_area") is None:
                         all_success = False
-        
+                        if data and data.get("error"):
+                            lookup_errors.append(data.get("error"))
+
         if all_success:
             status_placeholder.success("✅ Data loaded successfully! Proceeding...")
             import time
@@ -731,14 +1070,13 @@ def page_address_entry():
             goto("questions")
             st.rerun()
         else:
-            status_placeholder.warning("⚠️ Some rooftop data could not be fetched. You can continue anyway.")
-            import time
-            time.sleep(2)
-            goto("questions")
-            st.rerun()
+            status_placeholder.warning(TEXT["manual_fill_warning"][L])
+            if lookup_errors:
+                for err in dict.fromkeys(lookup_errors):
+                    status_placeholder.caption(f"• {err}")
 
 # -------------------------------------------------------
-# PAGE 3 — QUESTIONS (ONE PAGE PER ADDRESS)
+# PAGE 4 — QUESTIONS (ONE PAGE PER ADDRESS)
 # -------------------------------------------------------
 
 def page_questions():
@@ -761,88 +1099,12 @@ def page_questions():
 
     prefix = f"a{idx}_"
 
-    # Define answer options for each language
-    owner_options = {
-        "en": [
-            "Public entity or large institutional owner — Hospitals, municipalities, cantonal buildings, universities, major corporates. Typically low cost of capital and stable approval processes.",
-            "Standard commercial owner — Regular private companies, logistics firms, retail centers, property companies.",
-            "Private individual or small SME — Smaller budgets, higher financing constraints, usually slower decision cycles."
-        ],
-        "fr": [
-            "Entité publique ou grand propriétaire institutionnel — Hôpitaux, municipalités, bâtiments cantonaux, universités, grandes entreprises. Généralement faible coût du capital et processus d'approbation stables.",
-            "Propriétaire commercial standard — Entreprises privées régulières, entreprises de logistique, centres commerciaux, sociétés immobilières.",
-            "Particulier ou petite PME — Budgets plus petits, contraintes de financement plus élevées, cycles de décision généralement plus lents."
-        ],
-        "de": [
-            "Öffentliche Einrichtung oder großer institutioneller Eigentümer — Krankenhäuser, Gemeinden, Kantonsgebäude, Universitäten, große Unternehmen. Typischerweise niedrige Kapitalkosten und stabile Genehmigungsverfahren.",
-            "Standard-Gewerbeinhaber — Reguläre Privatunternehmen, Logistikunternehmen, Einkaufszentren, Immobiliengesellschaften.",
-            "Privatperson oder kleines KMU — Kleinere Budgets, höhere Finanzierungsbeschränkungen, in der Regel langsamere Entscheidungszyklen."
-        ]
-    }
-
-    esg_options = {
-        "en": [
-            "Yes — sustainability is clearly part of their identity (Website, annual reports, labels, certifications, public commitments)",
-            "Not sure — no clear signal (No obvious information available)",
-            "No — sustainability is not a visible priority (No ESG communication, purely cost-driven decision-making)"
-        ],
-        "fr": [
-            "Oui — la durabilité fait clairement partie de leur identité (Site web, rapports annuels, labels, certifications, engagements publics)",
-            "Incertain — aucun signal clair (Aucune information évidente disponible)",
-            "Non — la durabilité n'est pas une priorité visible (Aucune communication ESG, décisions purement basées sur les coûts)"
-        ],
-        "de": [
-            "Ja — Nachhaltigkeit ist eindeutig Teil ihrer Identität (Website, Jahresberichte, Labels, Zertifizierungen, öffentliche Verpflichtungen)",
-            "Unsicher — kein klares Signal (Keine offensichtlichen Informationen verfügbar)",
-            "Nein — Nachhaltigkeit ist keine sichtbare Priorität (Keine ESG-Kommunikation, rein kostenorientierte Entscheidungsfindung)"
-        ]
-    }
-
-    spend_options = {
-        "en": ["Below 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Above 800k CHF"],
-        "fr": ["Moins de 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Plus de 800k CHF"],
-        "de": ["Unter 100k CHF", "100k — 300k CHF", "300k — 800k CHF", "Über 800k CHF"]
-    }
-
-    season_options = {
-        "en": [
-            "Low seasonal variation (±10%) — Consumption stays stable across the year",
-            "Moderate variation (±10–25%) — Some seasonal differences (e.g., cooling or heating loads)",
-            "High variation (>25%) — Strong seasonality, big differences between summer and winter"
-        ],
-        "fr": [
-            "Faible variation saisonnière (±10%) — La consommation reste stable tout au long de l'année",
-            "Variation modérée (±10–25%) — Quelques différences saisonnières (par ex. charges de refroidissement ou de chauffage)",
-            "Forte variation (>25%) — Forte saisonnalité, grandes différences entre été et hiver"
-        ],
-        "de": [
-            "Geringe saisonale Schwankung (±10%) — Verbrauch bleibt über das Jahr stabil",
-            "Mäßige Schwankung (±10–25%) — Einige saisonale Unterschiede (z.B. Kühl- oder Heizlasten)",
-            "Hohe Schwankung (>25%) — Starke Saisonalität, große Unterschiede zwischen Sommer und Winter"
-        ]
-    }
-
-    loads_options = {
-        "en": [
-            "Yes — important 24/7 loads (Cold storage, server rooms, industrial baseload, data centers)",
-            "No — mainly daytime or irregular loads"
-        ],
-        "fr": [
-            "Oui — charges importantes 24h/24 7j/7 (Stockage frigorifique, salles de serveurs, charge de base industrielle, centres de données)",
-            "Non — principalement charges diurnes ou irrégulières"
-        ],
-        "de": [
-            "Ja — wichtige 24/7-Lasten (Kühlräume, Serverräume, industrielle Grundlast, Rechenzentren)",
-            "Nein — hauptsächlich Tages- oder unregelmäßige Lasten"
-        ]
-    }
-
     # OWNER TYPE
     st.markdown(f"### {TEXT['owner_type'][L]}")
     st.caption(TEXT["owner_type_help"][L])
     owner_type = st.radio(
         "",
-        owner_options[L],
+        QUESTION_OPTIONS["owner"][L],
         key=prefix + "owner",
         label_visibility="collapsed"
     )
@@ -853,7 +1115,7 @@ def page_questions():
     st.caption(TEXT["esg_help"][L])
     esg = st.radio(
         "",
-        esg_options[L],
+        QUESTION_OPTIONS["esg"][L],
         key=prefix + "esg",
         label_visibility="collapsed"
     )
@@ -876,7 +1138,7 @@ def page_questions():
     st.caption(TEXT["spend_help"][L])
     spend = st.radio(
         "",
-        spend_options[L],
+        QUESTION_OPTIONS["spend"][L],
         key=prefix + "spend",
         label_visibility="collapsed"
     )
@@ -887,7 +1149,7 @@ def page_questions():
     st.caption(TEXT["season_help"][L])
     season = st.radio(
         "",
-        season_options[L],
+        QUESTION_OPTIONS["season"][L],
         key=prefix + "season",
         label_visibility="collapsed"
     )
@@ -898,7 +1160,7 @@ def page_questions():
     st.caption(TEXT["loads_help"][L])
     loads = st.radio(
         "",
-        loads_options[L],
+        QUESTION_OPTIONS["loads"][L],
         key=prefix + "247",
         label_visibility="collapsed"
     )
@@ -931,7 +1193,7 @@ def page_questions():
             st.rerun()
 
 # -------------------------------------------------------
-# PAGE 4 — RESULTS
+# PAGE 5 — RESULTS
 # -------------------------------------------------------
 
 def page_results():
@@ -1014,6 +1276,8 @@ page = st.session_state["page"]
 
 if page == "lang":
     page_lang()
+elif page == "role":
+    page_role_selection()
 elif page == "address_entry":
     page_address_entry()
 elif page == "questions":
