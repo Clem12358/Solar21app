@@ -232,7 +232,7 @@ def _load_weights_from_disk():
             structure = float(data.get("structure", DEFAULT_WEIGHTS["structure"]))
             consumption = float(data.get("consumption", DEFAULT_WEIGHTS["consumption"]))
             total = structure + consumption
-
+            
             if total > 0:
                 return {
                     "structure": structure / total,
@@ -305,9 +305,14 @@ TEXT = {
         "de": "Berechnungsgewichte anpassen",
     },
     "weights_subtext": {
-        "en": "These weights apply to all users once saved.",
-        "fr": "Ces pondérations s'appliquent à tous les utilisateurs une fois sauvegardées.",
-        "de": "Diese Gewichte gelten nach dem Speichern für alle Nutzer.",
+        "en": "These weights apply to everyone using this shared app once saved.",
+        "fr": "Ces pondérations s'appliquent à tous ceux qui utilisent cette application partagée une fois sauvegardées.",
+        "de": "Diese Gewichte gelten nach dem Speichern für alle, die diese gemeinsame App nutzen.",
+    },
+    "weights_pull_hint": {
+        "en": "If colleagues already downloaded a local copy, they must pull/download the updated app from the same location again to receive these changes.",
+        "fr": "Si des collègues ont déjà téléchargé une copie locale, ils doivent récupérer/télécharger à nouveau l'application mise à jour depuis le même emplacement pour recevoir ces changements.",
+        "de": "Haben Kolleginnen oder Kollegen bereits eine lokale Kopie heruntergeladen, müssen sie die aktualisierte App erneut vom gleichen Ort beziehen, um diese Änderungen zu erhalten.",
     },
     "structure_weight": {
         "en": "Structure weight (roof + ownership + ESG)",
@@ -341,6 +346,11 @@ TEXT = {
         "fr": "Sites du projet — Adresses",
         "de": "Projektstandorte — Adressen"
     },
+    "roof_data_local_hint": {
+        "en": "Automatic roof sizing only works when you run the app locally with Chrome/Chromedriver installed. If you're using the hosted web version, please fill the rooftop values manually below.",
+        "fr": "Le dimensionnement automatique du toit fonctionne uniquement si vous exécutez l'application en local avec Chrome/Chromedriver installé. Si vous utilisez la version web hébergée, veuillez saisir manuellement les valeurs du toit ci-dessous.",
+        "de": "Die automatische Dachgrößen-Berechnung funktioniert nur, wenn Sie die App lokal mit installiertem Chrome/Chromedriver ausführen. Wenn Sie die gehostete Webversion nutzen, tragen Sie bitte die Dachwerte unten manuell ein.",
+    },
     "full_address": {
         "en": "Full address",
         "fr": "Adresse complète",
@@ -352,6 +362,31 @@ TEXT = {
         "de": "Dachdaten abrufen"
     },
     "save_continue": {"en": "Save & continue →", "fr": "Enregistrer & continuer →", "de": "Speichern & weiter →"},
+    "manual_roof_prompt": {
+        "en": "If rooftop data cannot be fetched automatically, enter it manually:",
+        "fr": "Si les données du toit ne peuvent pas être récupérées automatiquement, saisissez-les manuellement :",
+        "de": "Falls die Dachdaten nicht automatisch abgerufen werden können, geben Sie sie bitte manuell ein:",
+    },
+    "roof_area_input": {
+        "en": "Rooftop area (m²)",
+        "fr": "Surface du toit (m²)",
+        "de": "Dachfläche (m²)",
+    },
+    "roof_pitch_input": {
+        "en": "Roof pitch (°)",
+        "fr": "Inclinaison du toit (°)",
+        "de": "Dachneigung (°)",
+    },
+    "roof_orientation_input": {
+        "en": "Roof orientation (°)",
+        "fr": "Orientation du toit (°)",
+        "de": "Dachausrichtung (°)",
+    },
+    "manual_fill_warning": {
+        "en": "Automatic lookup failed. Please fill the rooftop values manually, then click Save & continue again.",
+        "fr": "La récupération automatique a échoué. Merci de renseigner manuellement les valeurs du toit, puis de cliquer à nouveau sur Enregistrer & continuer.",
+        "de": "Der automatische Abruf ist fehlgeschlagen. Bitte füllen Sie die Dachwerte manuell aus und klicken Sie dann erneut auf Speichern & weiter.",
+    },
     "questions_title": {
         "en": "Site Evaluation",
         "fr": "Évaluation du site",
@@ -847,6 +882,7 @@ def page_role_selection():
 
     if st.session_state.get("employee_authenticated"):
         st.success(TEXT["weights_subtext"][L])
+        st.info(TEXT["weights_pull_hint"][L])
         st.markdown(f"### {TEXT['weights_title'][L]}")
 
         structure_default = int(round(st.session_state["weights"]["structure"] * 100))
@@ -885,6 +921,8 @@ def page_address_entry():
 
     st.title(TEXT["address_title"][L])
     st.markdown("<br>", unsafe_allow_html=True)
+
+    st.warning(TEXT["roof_data_local_hint"][L])
 
     col_add, col_space = st.columns([1, 3])
     with col_add:
@@ -953,6 +991,36 @@ def page_address_entry():
             with st.expander("Debug Sonnendach data", expanded=False):
                 st.json(entry["sonnendach_raw"])
 
+        st.markdown(f"**{TEXT['manual_roof_prompt'][L]}**")
+        col_area, col_pitch, col_orient = st.columns(3)
+        area_val = col_area.number_input(
+            TEXT["roof_area_input"][L],
+            min_value=0.0,
+            value=float(entry["roof_area"]) if entry["roof_area"] is not None else 0.0,
+            step=1.0,
+            key=f"roof_area_{idx}",
+        )
+        pitch_val = col_pitch.number_input(
+            TEXT["roof_pitch_input"][L],
+            min_value=0.0,
+            max_value=90.0,
+            value=float(entry["roof_pitch"]) if entry["roof_pitch"] is not None else 0.0,
+            step=1.0,
+            key=f"roof_pitch_{idx}",
+        )
+        orient_val = col_orient.number_input(
+            TEXT["roof_orientation_input"][L],
+            min_value=0.0,
+            max_value=360.0,
+            value=float(entry["roof_orientation"]) if entry["roof_orientation"] is not None else 0.0,
+            step=5.0,
+            key=f"roof_orientation_{idx}",
+        )
+
+        entry["roof_area"] = area_val if area_val > 0 else None
+        entry["roof_pitch"] = pitch_val if pitch_val > 0 else None
+        entry["roof_orientation"] = orient_val if orient_val > 0 else None
+
         st.markdown("---")
 
     # Create a placeholder for the loading message
@@ -962,9 +1030,10 @@ def page_address_entry():
         # Show loading status
         with status_placeholder.container():
             st.info("🔄 Fetching rooftop data, please wait...")
-        
+
         # Fetch rooftop data for all addresses before continuing
         all_success = True
+        lookup_errors = []
         with st.spinner(""):
             for idx, entry in enumerate(st.session_state["addresses"]):
                 if entry["address"] and entry["canton"] and not entry["roof_area"]:
@@ -978,9 +1047,13 @@ def page_address_entry():
                         entry["roof_area"] = data.get("surface_area_m2")
                         entry["roof_pitch"] = data.get("roof_pitch_deg")
                         entry["roof_orientation"] = data.get("roof_heading_deg")
-                    else:
+                        if data.get("error"):
+                            lookup_errors.append(data.get("error"))
+                    if entry.get("roof_area") is None:
                         all_success = False
-        
+                        if data and data.get("error"):
+                            lookup_errors.append(data.get("error"))
+
         if all_success:
             status_placeholder.success("✅ Data loaded successfully! Proceeding...")
             import time
@@ -988,11 +1061,10 @@ def page_address_entry():
             goto("questions")
             st.rerun()
         else:
-            status_placeholder.warning("⚠️ Some rooftop data could not be fetched. You can continue anyway.")
-            import time
-            time.sleep(2)
-            goto("questions")
-            st.rerun()
+            status_placeholder.warning(TEXT["manual_fill_warning"][L])
+            if lookup_errors:
+                for err in dict.fromkeys(lookup_errors):
+                    status_placeholder.caption(f"• {err}")
 
 # -------------------------------------------------------
 # PAGE 4 — QUESTIONS (ONE PAGE PER ADDRESS)
