@@ -1,3 +1,7 @@
+import json
+import os
+from pathlib import Path
+
 import streamlit as st
 from modules.sonnendach import get_sonnendach_info
 
@@ -173,7 +177,6 @@ st.markdown("""
 # -------------------------------------------------------
 # LOGO (centered)
 # -------------------------------------------------------
-import os
 
 # Center the logo using columns
 logo_col1, logo_col2, logo_col3 = st.columns([1, 1, 1])
@@ -215,6 +218,35 @@ st.markdown("<br>", unsafe_allow_html=True)
 def goto(page):
     st.session_state["page"] = page
 
+WEIGHTS_FILE = Path("weights.json")
+DEFAULT_WEIGHTS = {"structure": 0.40, "consumption": 0.60}
+EMPLOYEE_PASSWORD = "28102025"
+
+
+def _load_weights_from_disk():
+    if WEIGHTS_FILE.exists():
+        try:
+            with WEIGHTS_FILE.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+
+            structure = float(data.get("structure", DEFAULT_WEIGHTS["structure"]))
+            consumption = float(data.get("consumption", DEFAULT_WEIGHTS["consumption"]))
+            total = structure + consumption
+
+            if total > 0:
+                return {
+                    "structure": structure / total,
+                    "consumption": consumption / total,
+                }
+        except Exception:
+            pass
+
+    return DEFAULT_WEIGHTS.copy()
+
+
+def _persist_weights(weights):
+    WEIGHTS_FILE.write_text(json.dumps(weights, indent=2), encoding="utf-8")
+
 def init_state():
     defaults = {
         "page": "lang",
@@ -222,6 +254,8 @@ def init_state():
         "addresses": [],
         "current_index": 0,
         "answers": {},
+        "weights": _load_weights_from_disk(),
+        "employee_authenticated": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -240,6 +274,66 @@ TEXT = {
         "de": "Wählen Sie Ihre Sprache"
     },
     "continue": {"en": "Continue →", "fr": "Continuer →", "de": "Weiter →"},
+    "role_title": {
+        "en": "Who are you?",
+        "fr": "Qui êtes-vous ?",
+        "de": "Wer sind Sie?",
+    },
+    "partner_option": {
+        "en": "I am a partner of Solar21",
+        "fr": "Je suis un partenaire de Solar21",
+        "de": "Ich bin Partner von Solar21",
+    },
+    "employee_option": {
+        "en": "I am an employee of Solar21",
+        "fr": "Je suis employé(e) de Solar21",
+        "de": "Ich bin Mitarbeiter*in von Solar21",
+    },
+    "employee_password": {
+        "en": "Employee password",
+        "fr": "Mot de passe employé",
+        "de": "Mitarbeiter-Passwort",
+    },
+    "employee_password_error": {
+        "en": "Incorrect password. Please try again.",
+        "fr": "Mot de passe incorrect. Veuillez réessayer.",
+        "de": "Falsches Passwort. Bitte erneut versuchen.",
+    },
+    "weights_title": {
+        "en": "Adjust calculation weights",
+        "fr": "Ajuster les pondérations du calcul",
+        "de": "Berechnungsgewichte anpassen",
+    },
+    "weights_subtext": {
+        "en": "These weights apply to all users once saved.",
+        "fr": "Ces pondérations s'appliquent à tous les utilisateurs une fois sauvegardées.",
+        "de": "Diese Gewichte gelten nach dem Speichern für alle Nutzer.",
+    },
+    "structure_weight": {
+        "en": "Structure weight (roof + ownership + ESG)",
+        "fr": "Poids de la structure (toit + propriétaire + ESG)",
+        "de": "Strukturgewicht (Dach + Eigentümer + ESG)",
+    },
+    "consumption_weight": {
+        "en": "Consumption weight (spend + load profile)",
+        "fr": "Poids de la consommation (dépenses + profil de charge)",
+        "de": "Verbrauchsgewicht (Kosten + Lastprofil)",
+    },
+    "save_weights": {
+        "en": "Save weights for all users",
+        "fr": "Enregistrer les pondérations pour tous",
+        "de": "Gewichte für alle speichern",
+    },
+    "weights_saved": {
+        "en": "Weights saved for all users.",
+        "fr": "Pondérations enregistrées pour tous les utilisateurs.",
+        "de": "Gewichte für alle Nutzer gespeichert.",
+    },
+    "proceed": {
+        "en": "Proceed →",
+        "fr": "Continuer →",
+        "de": "Weiter →",
+    },
     "add_site": {"en": "+ Add another address", "fr": "+ Ajouter une adresse", "de": "+ Eine Adresse hinzufügen"},
     "remove_site": {"en": "🗑️ Remove", "fr": "🗑️ Supprimer", "de": "🗑️ Entfernen"},
     "address_title": {
@@ -616,8 +710,19 @@ def compute_final_score(answers, roof_score):
     A_norm = A_total / 9
     B_norm = B_total / 13  # max is 13 (4+3+3+3)
     
-    # Apply weights: 40% structure (A), 60% consumption (B)
-    final_score = 0.40 * A_norm + 0.60 * B_norm
+    weights = st.session_state.get("weights", DEFAULT_WEIGHTS)
+    structure_weight = weights.get("structure", DEFAULT_WEIGHTS["structure"])
+    consumption_weight = weights.get("consumption", DEFAULT_WEIGHTS["consumption"])
+
+    total_weight = structure_weight + consumption_weight
+    if total_weight > 0:
+        structure_weight /= total_weight
+        consumption_weight /= total_weight
+    else:
+        structure_weight = DEFAULT_WEIGHTS["structure"]
+        consumption_weight = DEFAULT_WEIGHTS["consumption"]
+
+    final_score = structure_weight * A_norm + consumption_weight * B_norm
     
     # Convert to 0-100 scale
     final_score_100 = final_score * 100
@@ -700,11 +805,79 @@ def page_lang():
                 use_container_width=True,
                 type="primary",  # make Continue green like selected language
             ):
-                goto("address_entry")
+                goto("role")
                 st.rerun()
 
 # -------------------------------------------------------
-# PAGE 2 — ENTER ADDRESSES
+# PAGE 2 — ROLE SELECTION
+# -------------------------------------------------------
+
+def page_role_selection():
+    L = st.session_state["language"]
+    st.title(TEXT["role_title"][L])
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    choice = st.radio(
+        "",
+        [TEXT["partner_option"][L], TEXT["employee_option"][L]],
+        key="role_choice",
+        label_visibility="collapsed",
+    )
+
+    if choice == TEXT["partner_option"][L]:
+        st.session_state["employee_authenticated"] = False
+        if st.button(TEXT["proceed"][L], type="primary", use_container_width=True):
+            goto("address_entry")
+            st.rerun()
+        return
+
+    # Employee branch
+    pwd = st.text_input(
+        TEXT["employee_password"][L],
+        type="password",
+        key="employee_password_input",
+    )
+
+    if pwd:
+        if pwd == EMPLOYEE_PASSWORD:
+            st.session_state["employee_authenticated"] = True
+        else:
+            st.session_state["employee_authenticated"] = False
+            st.error(TEXT["employee_password_error"][L])
+
+    if st.session_state.get("employee_authenticated"):
+        st.success(TEXT["weights_subtext"][L])
+        st.markdown(f"### {TEXT['weights_title'][L]}")
+
+        structure_default = int(round(st.session_state["weights"]["structure"] * 100))
+        structure_pct = st.slider(
+            TEXT["structure_weight"][L],
+            0,
+            100,
+            structure_default,
+            step=5,
+            format="%d%%",
+        )
+
+        consumption_pct = 100 - structure_pct
+        st.write(f"{TEXT['consumption_weight'][L]}: **{consumption_pct}%**")
+
+        if st.button(TEXT["save_weights"][L], type="primary", use_container_width=True):
+            new_weights = {
+                "structure": structure_pct / 100,
+                "consumption": consumption_pct / 100,
+            }
+            st.session_state["weights"] = new_weights
+            _persist_weights(new_weights)
+            st.success(f"✅ {TEXT['weights_saved'][L]}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button(TEXT["proceed"][L], use_container_width=True):
+            goto("address_entry")
+            st.rerun()
+
+# -------------------------------------------------------
+# PAGE 3 — ENTER ADDRESSES
 # -------------------------------------------------------
 
 def page_address_entry():
@@ -822,7 +995,7 @@ def page_address_entry():
             st.rerun()
 
 # -------------------------------------------------------
-# PAGE 3 — QUESTIONS (ONE PAGE PER ADDRESS)
+# PAGE 4 — QUESTIONS (ONE PAGE PER ADDRESS)
 # -------------------------------------------------------
 
 def page_questions():
@@ -939,7 +1112,7 @@ def page_questions():
             st.rerun()
 
 # -------------------------------------------------------
-# PAGE 4 — RESULTS
+# PAGE 5 — RESULTS
 # -------------------------------------------------------
 
 def page_results():
@@ -1022,6 +1195,8 @@ page = st.session_state["page"]
 
 if page == "lang":
     page_lang()
+elif page == "role":
+    page_role_selection()
 elif page == "address_entry":
     page_address_entry()
 elif page == "questions":
