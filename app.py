@@ -232,7 +232,7 @@ def _load_weights_from_disk():
             structure = float(data.get("structure", DEFAULT_WEIGHTS["structure"]))
             consumption = float(data.get("consumption", DEFAULT_WEIGHTS["consumption"]))
             total = structure + consumption
-            
+
             if total > 0:
                 return {
                     "structure": structure / total,
@@ -366,6 +366,11 @@ TEXT = {
         "en": "If rooftop data cannot be fetched automatically, enter it manually:",
         "fr": "Si les données du toit ne peuvent pas être récupérées automatiquement, saisissez-les manuellement :",
         "de": "Falls die Dachdaten nicht automatisch abgerufen werden können, geben Sie sie bitte manuell ein:",
+    },
+    "manual_roof_hint": {
+        "en": "You can also approximate these values on <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a>.",
+        "fr": "Vous pouvez également estimer ces valeurs sur <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a>.",
+        "de": "Sie können diese Werte auch auf <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a> abschätzen.",
     },
     "roof_area_input": {
         "en": "Rooftop area (m²)",
@@ -982,16 +987,14 @@ def page_address_entry():
             key=f"canton_{idx}"
         )
 
-        if entry["roof_area"] is not None:
-            rs = compute_roof_score(entry["roof_area"])
-            st.info(f"🏠 Rooftop area used for scoring: **{entry['roof_area']} m²** (roof score: {rs}/3)")
-
         # Debug: show raw Sonnendach response if available
         if entry.get("sonnendach_raw") is not None:
             with st.expander("Debug Sonnendach data", expanded=False):
                 st.json(entry["sonnendach_raw"])
 
         st.markdown(f"**{TEXT['manual_roof_prompt'][L]}**")
+        st.caption(TEXT["roof_data_local_hint"][L])
+        st.caption(TEXT["manual_roof_hint"][L], unsafe_allow_html=True)
         col_area, col_pitch, col_orient = st.columns(3)
         area_val = col_area.number_input(
             TEXT["roof_area_input"][L],
@@ -1020,6 +1023,12 @@ def page_address_entry():
         entry["roof_area"] = area_val if area_val > 0 else None
         entry["roof_pitch"] = pitch_val if pitch_val > 0 else None
         entry["roof_orientation"] = orient_val if orient_val > 0 else None
+
+        if entry["roof_area"] is not None:
+            rs = compute_roof_score(entry["roof_area"])
+            st.info(
+                f"🏠 Rooftop area used for scoring: **{entry['roof_area']} m²** (roof score: {rs}/3)"
+            )
 
         st.markdown("---")
 
