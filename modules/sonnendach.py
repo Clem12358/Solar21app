@@ -1,11 +1,15 @@
 import re
+import shutil
 import time
 import streamlit as st
 
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 # -------------------------------
@@ -100,15 +104,54 @@ def to_float(x):
 # -------------------------------
 # Selenium scraping
 # -------------------------------
-def get_sonnendach_info(address: str) -> dict:
-    """Launch Selenium, query Sonnendach, scrape PV + roof values."""
+def _build_chrome_driver():
+    """Provision a Chrome driver with best-effort auto-install and clear errors."""
 
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
     options.add_argument("--window-size=1920,1080")
 
-    driver = webdriver.Chrome(options=options)
+    # Prefer an existing Chrome/Chromium binary if one is available
+    for candidate in [
+        st.secrets.get("chrome_path") if hasattr(st, "secrets") else None,
+        shutil.which("google-chrome"),
+        shutil.which("google-chrome-stable"),
+        shutil.which("chromium"),
+        shutil.which("chromium-browser"),
+    ]:
+        if candidate:
+            options.binary_location = candidate
+            break
+
+    try:
+        service = Service(ChromeDriverManager().install())
+        return webdriver.Chrome(service=service, options=options)
+    except WebDriverException as exc:  # pragma: no cover - depends on host binaries
+        raise RuntimeError(
+            "Chrome/Chromedriver could not start. "
+            "If you're running locally, execute `./scripts/bootstrap_browser.sh` "
+            "to install a compatible headless Chrome stack."
+        ) from exc
+
+
+def get_sonnendach_info(address: str) -> dict:
+    """Launch Selenium, query Sonnendach, scrape PV + roof values."""
+
+    try:
+        driver = _build_chrome_driver()
+    except Exception as exc:
+        return {
+            "address": address,
+            "error": f"Unable to start browser: {exc}",
+            "suitability": None,
+            "pv_full_kwh": None,
+            "roof_pitch_deg": None,
+            "roof_heading_deg": None,
+            "surface_area_m2": None,
+        }
+
     wait = WebDriverWait(driver, 40)
 
     try:
