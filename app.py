@@ -219,7 +219,19 @@ def goto(page):
     st.session_state["page"] = page
 
 WEIGHTS_FILE = Path("weights.json")
-DEFAULT_WEIGHTS = {"structure": 0.40, "consumption": 0.60}
+DEFAULT_WEIGHTS = {
+    "structure": 0.40,
+    "consumption": 0.60,
+    # Sub-weights for structure (must sum to 1.0)
+    "sub_roof": 0.40,
+    "sub_owner": 0.30,
+    "sub_esg": 0.30,
+    # Sub-weights for consumption (must sum to 1.0)
+    "sub_spend": 0.30,
+    "sub_daytime": 0.25,
+    "sub_season": 0.25,
+    "sub_loads": 0.20,
+}
 EMPLOYEE_PASSWORD = "28102025"
 
 
@@ -234,10 +246,48 @@ def _load_weights_from_disk():
             total = structure + consumption
 
             if total > 0:
-                return {
+                weights = {
                     "structure": structure / total,
                     "consumption": consumption / total,
                 }
+            else:
+                weights = {
+                    "structure": DEFAULT_WEIGHTS["structure"],
+                    "consumption": DEFAULT_WEIGHTS["consumption"],
+                }
+
+            # Load sub-weights for structure
+            sub_roof = float(data.get("sub_roof", DEFAULT_WEIGHTS["sub_roof"]))
+            sub_owner = float(data.get("sub_owner", DEFAULT_WEIGHTS["sub_owner"]))
+            sub_esg = float(data.get("sub_esg", DEFAULT_WEIGHTS["sub_esg"]))
+            struct_total = sub_roof + sub_owner + sub_esg
+            if struct_total > 0:
+                weights["sub_roof"] = sub_roof / struct_total
+                weights["sub_owner"] = sub_owner / struct_total
+                weights["sub_esg"] = sub_esg / struct_total
+            else:
+                weights["sub_roof"] = DEFAULT_WEIGHTS["sub_roof"]
+                weights["sub_owner"] = DEFAULT_WEIGHTS["sub_owner"]
+                weights["sub_esg"] = DEFAULT_WEIGHTS["sub_esg"]
+
+            # Load sub-weights for consumption
+            sub_spend = float(data.get("sub_spend", DEFAULT_WEIGHTS["sub_spend"]))
+            sub_daytime = float(data.get("sub_daytime", DEFAULT_WEIGHTS["sub_daytime"]))
+            sub_season = float(data.get("sub_season", DEFAULT_WEIGHTS["sub_season"]))
+            sub_loads = float(data.get("sub_loads", DEFAULT_WEIGHTS["sub_loads"]))
+            cons_total = sub_spend + sub_daytime + sub_season + sub_loads
+            if cons_total > 0:
+                weights["sub_spend"] = sub_spend / cons_total
+                weights["sub_daytime"] = sub_daytime / cons_total
+                weights["sub_season"] = sub_season / cons_total
+                weights["sub_loads"] = sub_loads / cons_total
+            else:
+                weights["sub_spend"] = DEFAULT_WEIGHTS["sub_spend"]
+                weights["sub_daytime"] = DEFAULT_WEIGHTS["sub_daytime"]
+                weights["sub_season"] = DEFAULT_WEIGHTS["sub_season"]
+                weights["sub_loads"] = DEFAULT_WEIGHTS["sub_loads"]
+
+            return weights
         except Exception:
             pass
 
@@ -333,6 +383,61 @@ TEXT = {
         "en": "Weights saved for all users.",
         "fr": "Pondérations enregistrées pour tous les utilisateurs.",
         "de": "Gewichte für alle Nutzer gespeichert.",
+    },
+    "main_weights_section": {
+        "en": "Main Category Weights",
+        "fr": "Pondérations des catégories principales",
+        "de": "Hauptkategoriegewichte",
+    },
+    "structure_subweights_section": {
+        "en": "Structure Sub-weights",
+        "fr": "Sous-pondérations de la structure",
+        "de": "Struktur-Untergewichte",
+    },
+    "consumption_subweights_section": {
+        "en": "Consumption Sub-weights",
+        "fr": "Sous-pondérations de la consommation",
+        "de": "Verbrauchs-Untergewichte",
+    },
+    "sub_roof_weight": {
+        "en": "Roof size",
+        "fr": "Taille du toit",
+        "de": "Dachgröße",
+    },
+    "sub_owner_weight": {
+        "en": "Owner type",
+        "fr": "Type de propriétaire",
+        "de": "Eigentümertyp",
+    },
+    "sub_esg_weight": {
+        "en": "ESG engagement",
+        "fr": "Engagement ESG",
+        "de": "ESG-Engagement",
+    },
+    "sub_spend_weight": {
+        "en": "Electricity spend",
+        "fr": "Dépenses d'électricité",
+        "de": "Stromkosten",
+    },
+    "sub_daytime_weight": {
+        "en": "Daytime consumption",
+        "fr": "Consommation diurne",
+        "de": "Tagesverbrauch",
+    },
+    "sub_season_weight": {
+        "en": "Seasonal stability",
+        "fr": "Stabilité saisonnière",
+        "de": "Saisonale Stabilität",
+    },
+    "sub_loads_weight": {
+        "en": "24/7 loads",
+        "fr": "Charges 24/7",
+        "de": "24/7-Lasten",
+    },
+    "fine_tune_hint": {
+        "en": "Fine-tune individual factors within each category",
+        "fr": "Ajustez finement les facteurs individuels de chaque catégorie",
+        "de": "Feinabstimmung der einzelnen Faktoren innerhalb jeder Kategorie",
     },
     "proceed": {
         "en": "Proceed →",
@@ -682,9 +787,9 @@ def compute_roof_score(area):
         return 1
 
 def compute_final_score(answers, roof_score):
-    """Compute the final Solar21 site attractiveness score"""
-    
-    # Extract owner type score
+    """Compute the final Solar21 site attractiveness score using weighted sub-scores"""
+
+    # Extract owner type score (max 3)
     owner_str = answers["owner_type"]
     if "Public entity" in owner_str or "Entité publique" in owner_str or "Öffentliche Einrichtung" in owner_str:
         owner_type_score = 3
@@ -692,8 +797,8 @@ def compute_final_score(answers, roof_score):
         owner_type_score = 2
     else:
         owner_type_score = 1
-    
-    # Extract ESG score
+
+    # Extract ESG score (max 3)
     esg_str = answers["esg"]
     if esg_str.startswith("Yes") or esg_str.startswith("Oui") or esg_str.startswith("Ja"):
         esg_score = 3
@@ -701,11 +806,8 @@ def compute_final_score(answers, roof_score):
         esg_score = 2
     else:
         esg_score = 1
-    
-    # A_total: roof + owner + esg (max 9)
-    A_total = roof_score + owner_type_score + esg_score
-    
-    # Extract spend score
+
+    # Extract spend score (max 4)
     spend_str = answers["spend"]
     if "Above 800k" in spend_str or "Plus de 800k" in spend_str or "Über 800k" in spend_str:
         spend_score = 4
@@ -715,8 +817,8 @@ def compute_final_score(answers, roof_score):
         spend_score = 2
     else:
         spend_score = 1
-    
-    # Daytime score (convert percentage to 0-3)
+
+    # Daytime score (max 3)
     daytime_pct = answers["daytime"]
     if daytime_pct >= 75:
         daytime_score = 3
@@ -726,8 +828,8 @@ def compute_final_score(answers, roof_score):
         daytime_score = 1
     else:
         daytime_score = 0
-    
-    # Seasonality score (inverted - low variation is better)
+
+    # Seasonality score (max 3, inverted - low variation is better)
     season_str = answers["season"]
     if "Low" in season_str or "Faible" in season_str or "Geringe" in season_str:
         season_score = 3
@@ -735,25 +837,22 @@ def compute_final_score(answers, roof_score):
         season_score = 2
     else:
         season_score = 1
-    
-    # 24/7 loads score
+
+    # 24/7 loads score (max 3)
     loads_str = answers["loads"]
     if loads_str.startswith("Yes") or loads_str.startswith("Oui") or loads_str.startswith("Ja"):
         loads_score = 3
     else:
         loads_score = 1
-    
-    # B_total: spend + daytime + season + loads (max 13: 4+3+3+3)
-    B_total = spend_score + daytime_score + season_score + loads_score
-    
-    # Normalize
-    A_norm = A_total / 9
-    B_norm = B_total / 13  # max is 13 (4+3+3+3)
-    
+
+    # Get weights from session state
     weights = st.session_state.get("weights", DEFAULT_WEIGHTS)
+
+    # Main category weights
     structure_weight = weights.get("structure", DEFAULT_WEIGHTS["structure"])
     consumption_weight = weights.get("consumption", DEFAULT_WEIGHTS["consumption"])
 
+    # Normalize main weights
     total_weight = structure_weight + consumption_weight
     if total_weight > 0:
         structure_weight /= total_weight
@@ -762,11 +861,39 @@ def compute_final_score(answers, roof_score):
         structure_weight = DEFAULT_WEIGHTS["structure"]
         consumption_weight = DEFAULT_WEIGHTS["consumption"]
 
+    # Structure sub-weights
+    sub_roof = weights.get("sub_roof", DEFAULT_WEIGHTS["sub_roof"])
+    sub_owner = weights.get("sub_owner", DEFAULT_WEIGHTS["sub_owner"])
+    sub_esg = weights.get("sub_esg", DEFAULT_WEIGHTS["sub_esg"])
+
+    # Consumption sub-weights
+    sub_spend = weights.get("sub_spend", DEFAULT_WEIGHTS["sub_spend"])
+    sub_daytime = weights.get("sub_daytime", DEFAULT_WEIGHTS["sub_daytime"])
+    sub_season = weights.get("sub_season", DEFAULT_WEIGHTS["sub_season"])
+    sub_loads = weights.get("sub_loads", DEFAULT_WEIGHTS["sub_loads"])
+
+    # Normalize each sub-score to 0-1 range, then apply sub-weights
+    # Structure: roof (0-3), owner (1-3), esg (1-3)
+    roof_norm = roof_score / 3 if roof_score > 0 else 0
+    owner_norm = owner_type_score / 3
+    esg_norm = esg_score / 3
+
+    A_norm = sub_roof * roof_norm + sub_owner * owner_norm + sub_esg * esg_norm
+
+    # Consumption: spend (1-4), daytime (0-3), season (1-3), loads (1-3)
+    spend_norm = spend_score / 4
+    daytime_norm = daytime_score / 3
+    season_norm = season_score / 3
+    loads_norm = loads_score / 3
+
+    B_norm = sub_spend * spend_norm + sub_daytime * daytime_norm + sub_season * season_norm + sub_loads * loads_norm
+
+    # Final weighted score
     final_score = structure_weight * A_norm + consumption_weight * B_norm
-    
+
     # Convert to 0-100 scale
     final_score_100 = final_score * 100
-    
+
     return round(final_score_100, 1)
 
 def get_score_interpretation(score, lang="en"):
@@ -888,34 +1015,150 @@ def page_role_selection():
     if st.session_state.get("employee_authenticated"):
         st.success(TEXT["weights_subtext"][L])
         st.info(TEXT["weights_pull_hint"][L])
-        st.markdown(f"### {TEXT['weights_title'][L]}")
 
-        structure_default = int(round(st.session_state["weights"]["structure"] * 100))
-        structure_pct = st.slider(
-            TEXT["structure_weight"][L],
-            0,
-            100,
-            structure_default,
-            step=5,
-            format="%d%%",
-        )
+        st.markdown(f"## {TEXT['weights_title'][L]}")
+        st.caption(TEXT["fine_tune_hint"][L])
+        st.markdown("---")
 
-        consumption_pct = 100 - structure_pct
-        st.write(f"{TEXT['consumption_weight'][L]}: **{consumption_pct}%**")
+        # ─────────────────────────────────────────────────────────
+        # MAIN CATEGORY WEIGHTS
+        # ─────────────────────────────────────────────────────────
+        st.markdown(f"### {TEXT['main_weights_section'][L]}")
 
-        if st.button(TEXT["save_weights"][L], type="primary", use_container_width=True):
-            new_weights = {
-                "structure": structure_pct / 100,
-                "consumption": consumption_pct / 100,
-            }
-            st.session_state["weights"] = new_weights
-            _persist_weights(new_weights)
-            st.success(f"✅ {TEXT['weights_saved'][L]}")
+        col1, col2 = st.columns(2)
+        with col1:
+            structure_default = int(round(st.session_state["weights"]["structure"] * 100))
+            structure_pct = st.slider(
+                TEXT["structure_weight"][L],
+                0, 100, structure_default,
+                step=5, format="%d%%", key="main_structure"
+            )
+        with col2:
+            consumption_pct = 100 - structure_pct
+            st.markdown(f"**{TEXT['consumption_weight'][L]}**")
+            st.markdown(f"<p style='font-size: 2rem; margin: 0;'>{consumption_pct}%</p>", unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button(TEXT["proceed"][L], use_container_width=True):
-            goto("address_entry")
-            st.rerun()
+        st.markdown("---")
+
+        # ─────────────────────────────────────────────────────────
+        # STRUCTURE SUB-WEIGHTS (expandable)
+        # ─────────────────────────────────────────────────────────
+        with st.expander(f"⚙️ {TEXT['structure_subweights_section'][L]}", expanded=False):
+            st.markdown("""
+            <div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;'>
+            <small>These weights determine the relative importance of factors within the Structure category. They will be normalized to sum to 100%.</small>
+            </div>
+            """, unsafe_allow_html=True)
+
+            scol1, scol2, scol3 = st.columns(3)
+            with scol1:
+                sub_roof_default = int(round(st.session_state["weights"].get("sub_roof", DEFAULT_WEIGHTS["sub_roof"]) * 100))
+                sub_roof_pct = st.slider(
+                    TEXT["sub_roof_weight"][L],
+                    0, 100, sub_roof_default,
+                    step=5, format="%d%%", key="sub_roof"
+                )
+            with scol2:
+                sub_owner_default = int(round(st.session_state["weights"].get("sub_owner", DEFAULT_WEIGHTS["sub_owner"]) * 100))
+                sub_owner_pct = st.slider(
+                    TEXT["sub_owner_weight"][L],
+                    0, 100, sub_owner_default,
+                    step=5, format="%d%%", key="sub_owner"
+                )
+            with scol3:
+                sub_esg_default = int(round(st.session_state["weights"].get("sub_esg", DEFAULT_WEIGHTS["sub_esg"]) * 100))
+                sub_esg_pct = st.slider(
+                    TEXT["sub_esg_weight"][L],
+                    0, 100, sub_esg_default,
+                    step=5, format="%d%%", key="sub_esg"
+                )
+
+            struct_sub_total = sub_roof_pct + sub_owner_pct + sub_esg_pct
+            if struct_sub_total > 0:
+                st.caption(f"Total: {struct_sub_total}% → normalized to 100%")
+            else:
+                st.warning("At least one sub-weight must be > 0")
+
+        # ─────────────────────────────────────────────────────────
+        # CONSUMPTION SUB-WEIGHTS (expandable)
+        # ─────────────────────────────────────────────────────────
+        with st.expander(f"⚙️ {TEXT['consumption_subweights_section'][L]}", expanded=False):
+            st.markdown("""
+            <div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;'>
+            <small>These weights determine the relative importance of factors within the Consumption category. They will be normalized to sum to 100%.</small>
+            </div>
+            """, unsafe_allow_html=True)
+
+            ccol1, ccol2 = st.columns(2)
+            with ccol1:
+                sub_spend_default = int(round(st.session_state["weights"].get("sub_spend", DEFAULT_WEIGHTS["sub_spend"]) * 100))
+                sub_spend_pct = st.slider(
+                    TEXT["sub_spend_weight"][L],
+                    0, 100, sub_spend_default,
+                    step=5, format="%d%%", key="sub_spend"
+                )
+                sub_daytime_default = int(round(st.session_state["weights"].get("sub_daytime", DEFAULT_WEIGHTS["sub_daytime"]) * 100))
+                sub_daytime_pct = st.slider(
+                    TEXT["sub_daytime_weight"][L],
+                    0, 100, sub_daytime_default,
+                    step=5, format="%d%%", key="sub_daytime"
+                )
+            with ccol2:
+                sub_season_default = int(round(st.session_state["weights"].get("sub_season", DEFAULT_WEIGHTS["sub_season"]) * 100))
+                sub_season_pct = st.slider(
+                    TEXT["sub_season_weight"][L],
+                    0, 100, sub_season_default,
+                    step=5, format="%d%%", key="sub_season"
+                )
+                sub_loads_default = int(round(st.session_state["weights"].get("sub_loads", DEFAULT_WEIGHTS["sub_loads"]) * 100))
+                sub_loads_pct = st.slider(
+                    TEXT["sub_loads_weight"][L],
+                    0, 100, sub_loads_default,
+                    step=5, format="%d%%", key="sub_loads"
+                )
+
+            cons_sub_total = sub_spend_pct + sub_daytime_pct + sub_season_pct + sub_loads_pct
+            if cons_sub_total > 0:
+                st.caption(f"Total: {cons_sub_total}% → normalized to 100%")
+            else:
+                st.warning("At least one sub-weight must be > 0")
+
+        st.markdown("---")
+
+        # ─────────────────────────────────────────────────────────
+        # SAVE BUTTON
+        # ─────────────────────────────────────────────────────────
+        col_save, col_proceed = st.columns(2)
+        with col_save:
+            if st.button(TEXT["save_weights"][L], type="primary", use_container_width=True):
+                # Normalize structure sub-weights
+                struct_total = sub_roof_pct + sub_owner_pct + sub_esg_pct
+                if struct_total == 0:
+                    struct_total = 1  # Avoid division by zero
+                # Normalize consumption sub-weights
+                cons_total = sub_spend_pct + sub_daytime_pct + sub_season_pct + sub_loads_pct
+                if cons_total == 0:
+                    cons_total = 1
+
+                new_weights = {
+                    "structure": structure_pct / 100,
+                    "consumption": consumption_pct / 100,
+                    "sub_roof": sub_roof_pct / struct_total,
+                    "sub_owner": sub_owner_pct / struct_total,
+                    "sub_esg": sub_esg_pct / struct_total,
+                    "sub_spend": sub_spend_pct / cons_total,
+                    "sub_daytime": sub_daytime_pct / cons_total,
+                    "sub_season": sub_season_pct / cons_total,
+                    "sub_loads": sub_loads_pct / cons_total,
+                }
+                st.session_state["weights"] = new_weights
+                _persist_weights(new_weights)
+                st.success(f"✅ {TEXT['weights_saved'][L]}")
+
+        with col_proceed:
+            if st.button(TEXT["proceed"][L], use_container_width=True):
+                goto("address_entry")
+                st.rerun()
 
 # -------------------------------------------------------
 # PAGE 3 — ENTER ADDRESSES
@@ -1081,89 +1324,188 @@ def page_questions():
     L = st.session_state["language"]
     idx = st.session_state["current_index"]
     site = st.session_state["addresses"][idx]
+    total_sites = len(st.session_state["addresses"])
 
-    # Debug info: show roof area + Sonnendach raw data on the questions page as well
+    # ─────────────────────────────────────────────────────────
+    # HEADER WITH PROGRESS
+    # ─────────────────────────────────────────────────────────
+    st.title(f"{TEXT['questions_title'][L]}")
+
+    # Progress indicator
+    progress = (idx + 1) / total_sites
+    st.progress(progress)
+    st.markdown(
+        f"""
+        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
+            <span style='font-size: 1.1rem; font-weight: 600;'>📍 {site['address']}</span>
+            <span style='background: #00FF40; color: #000; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600;'>
+                Site {idx + 1} / {total_sites}
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Roof info card (if available)
     if site.get("roof_area") is not None:
         rs = compute_roof_score(site["roof_area"])
-        st.info(f"🏠 Rooftop area used for scoring: **{site['roof_area']} m²** (roof score: {rs}/3)")
+        st.markdown(
+            f"""
+            <div style='background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 1rem 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #00FF40;'>
+                <span style='font-size: 1.1rem;'>🏠 <strong>Roof area:</strong> {site['roof_area']} m² &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Score:</strong> {rs}/3</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     if site.get("sonnendach_raw") is not None:
-        with st.expander("Debug roof data", expanded=False):
+        with st.expander("🔍 Debug roof data", expanded=False):
             st.json(site["sonnendach_raw"])
-
-    st.title(f"{TEXT['questions_title'][L]}")
-    st.markdown(f"**📍 {site['address']} ({site['canton']})**")
-    st.markdown("---")
 
     prefix = f"a{idx}_"
 
-    # OWNER TYPE
-    st.markdown(f"### {TEXT['owner_type'][L]}")
-    st.caption(TEXT["owner_type_help"][L])
+    # ─────────────────────────────────────────────────────────
+    # QUESTIONS IN STYLED CONTAINERS
+    # ─────────────────────────────────────────────────────────
+
+    # Question card style (CSS injection)
+    st.markdown("""
+    <style>
+        .question-card {
+            background: #fafafa;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: box-shadow 0.2s ease;
+        }
+        .question-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .question-number {
+            display: inline-block;
+            background: #00FF40;
+            color: #000;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-right: 0.75rem;
+        }
+        .question-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+        .question-help {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+            padding-left: 2.5rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── QUESTION 1: OWNER TYPE ──
+    st.markdown(f"""
+    <div class="question-card">
+        <div class="question-title"><span class="question-number">1</span>{TEXT['owner_type'][L]}</div>
+        <div class="question-help">{TEXT['owner_type_help'][L]}</div>
+    </div>
+    """, unsafe_allow_html=True)
     owner_type = st.radio(
-        "",
+        "owner_type_radio",
         QUESTION_OPTIONS["owner"][L],
         key=prefix + "owner",
         label_visibility="collapsed"
     )
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # ESG
-    st.markdown(f"### {TEXT['esg'][L]}")
-    st.caption(TEXT["esg_help"][L])
+    # ── QUESTION 2: ESG ──
+    st.markdown(f"""
+    <div class="question-card">
+        <div class="question-title"><span class="question-number">2</span>{TEXT['esg'][L]}</div>
+        <div class="question-help">{TEXT['esg_help'][L]}</div>
+    </div>
+    """, unsafe_allow_html=True)
     esg = st.radio(
-        "",
+        "esg_radio",
         QUESTION_OPTIONS["esg"][L],
         key=prefix + "esg",
         label_visibility="collapsed"
     )
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # DAYTIME
-    st.markdown(f"### {TEXT['daytime'][L]}")
-    st.caption(TEXT["daytime_help"][L])
-    daytime = st.slider(
-        "",
-        0, 100, 60,
-        key=prefix + "daytime",
-        label_visibility="collapsed"
-    )
-    st.markdown(f"**{daytime}%**")
-    st.markdown("<br>", unsafe_allow_html=True)
+    # ── QUESTION 3: DAYTIME ──
+    st.markdown(f"""
+    <div class="question-card">
+        <div class="question-title"><span class="question-number">3</span>{TEXT['daytime'][L]}</div>
+        <div class="question-help">{TEXT['daytime_help'][L]}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    col_slider, col_value = st.columns([4, 1])
+    with col_slider:
+        daytime = st.slider(
+            "daytime_slider",
+            0, 100, 60,
+            key=prefix + "daytime",
+            label_visibility="collapsed"
+        )
+    with col_value:
+        st.markdown(
+            f"<div style='background: #00FF40; color: #000; padding: 0.5rem 1rem; border-radius: 8px; text-align: center; font-size: 1.3rem; font-weight: 700;'>{daytime}%</div>",
+            unsafe_allow_html=True
+        )
 
-    # SPEND
-    st.markdown(f"### {TEXT['spend'][L]}")
-    st.caption(TEXT["spend_help"][L])
+    # ── QUESTION 4: SPEND ──
+    st.markdown(f"""
+    <div class="question-card">
+        <div class="question-title"><span class="question-number">4</span>{TEXT['spend'][L]}</div>
+        <div class="question-help">{TEXT['spend_help'][L]}</div>
+    </div>
+    """, unsafe_allow_html=True)
     spend = st.radio(
-        "",
+        "spend_radio",
         QUESTION_OPTIONS["spend"][L],
         key=prefix + "spend",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        horizontal=True
     )
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # SEASON
-    st.markdown(f"### {TEXT['season'][L]}")
-    st.caption(TEXT["season_help"][L])
+    # ── QUESTION 5: SEASON ──
+    st.markdown(f"""
+    <div class="question-card">
+        <div class="question-title"><span class="question-number">5</span>{TEXT['season'][L]}</div>
+        <div class="question-help">{TEXT['season_help'][L]}</div>
+    </div>
+    """, unsafe_allow_html=True)
     season = st.radio(
-        "",
+        "season_radio",
         QUESTION_OPTIONS["season"][L],
         key=prefix + "season",
         label_visibility="collapsed"
     )
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # 24/7
-    st.markdown(f"### {TEXT['loads'][L]}")
-    st.caption(TEXT["loads_help"][L])
+    # ── QUESTION 6: 24/7 LOADS ──
+    st.markdown(f"""
+    <div class="question-card">
+        <div class="question-title"><span class="question-number">6</span>{TEXT['loads'][L]}</div>
+        <div class="question-help">{TEXT['loads_help'][L]}</div>
+    </div>
+    """, unsafe_allow_html=True)
     loads = st.radio(
-        "",
+        "loads_radio",
         QUESTION_OPTIONS["loads"][L],
         key=prefix + "247",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        horizontal=True
     )
 
-    # Save all
+    # ─────────────────────────────────────────────────────────
+    # SAVE ANSWERS
+    # ─────────────────────────────────────────────────────────
     st.session_state["answers"][idx] = {
         "owner_type": owner_type,
         "esg": esg,
@@ -1174,21 +1516,27 @@ def page_questions():
         "roof_score": compute_roof_score(site["roof_area"]),
     }
 
-    st.markdown("---")
-    c1, c2 = st.columns(2)
+    # ─────────────────────────────────────────────────────────
+    # NAVIGATION BUTTONS
+    # ─────────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 2, 1])
 
-    if idx > 0:
-        if c1.button("← Back", use_container_width=True):
-            st.session_state["current_index"] -= 1
-            st.rerun()
+    with c1:
+        if idx > 0:
+            if st.button("← Back", use_container_width=True):
+                st.session_state["current_index"] -= 1
+                st.rerun()
 
-    if c2.button(TEXT["continue"][L], use_container_width=True, type="primary"):
-        if idx < len(st.session_state["addresses"]) - 1:
-            st.session_state["current_index"] += 1
-            st.rerun()
-        else:
-            goto("results")
-            st.rerun()
+    with c3:
+        button_label = TEXT["continue"][L] if idx < total_sites - 1 else "View Results →"
+        if st.button(button_label, use_container_width=True, type="primary"):
+            if idx < total_sites - 1:
+                st.session_state["current_index"] += 1
+                st.rerun()
+            else:
+                goto("results")
+                st.rerun()
 
 # -------------------------------------------------------
 # PAGE 5 — RESULTS
