@@ -617,6 +617,56 @@ TEXT = {
         "fr": "Charges 24/7",
         "de": "24/7-Lasten"
     },
+    "structure_score_label": {
+        "en": "Structure Score",
+        "fr": "Score Structure",
+        "de": "Strukturbewertung"
+    },
+    "consumption_score_label": {
+        "en": "Consumption Score",
+        "fr": "Score Consommation",
+        "de": "Verbrauchsbewertung"
+    },
+    "score_breakdown": {
+        "en": "Score Breakdown",
+        "fr": "Détail du score",
+        "de": "Score-Aufschlüsselung"
+    },
+    "strengths": {
+        "en": "Strengths",
+        "fr": "Points forts",
+        "de": "Stärken"
+    },
+    "areas_to_watch": {
+        "en": "Areas to Watch",
+        "fr": "Points d'attention",
+        "de": "Zu beachtende Bereiche"
+    },
+    "factor_analysis": {
+        "en": "Factor Analysis",
+        "fr": "Analyse des facteurs",
+        "de": "Faktorenanalyse"
+    },
+    "excellent": {
+        "en": "Excellent",
+        "fr": "Excellent",
+        "de": "Ausgezeichnet"
+    },
+    "good": {
+        "en": "Good",
+        "fr": "Bon",
+        "de": "Gut"
+    },
+    "average": {
+        "en": "Average",
+        "fr": "Moyen",
+        "de": "Durchschnittlich"
+    },
+    "below_average": {
+        "en": "Below Average",
+        "fr": "Sous la moyenne",
+        "de": "Unterdurchschnittlich"
+    },
     "interpretation": {
         "exceptional": {
             "en": "Exceptional match",
@@ -895,6 +945,108 @@ def compute_final_score(answers, roof_score):
     final_score_100 = final_score * 100
 
     return round(final_score_100, 1)
+
+
+def compute_detailed_scores(answers, roof_score):
+    """Compute detailed breakdown of all scores for results display"""
+
+    # Extract owner type score (max 3)
+    owner_str = answers["owner_type"]
+    if "Public entity" in owner_str or "Entité publique" in owner_str or "Öffentliche Einrichtung" in owner_str:
+        owner_type_score = 3
+    elif "Standard commercial" in owner_str or "commercial standard" in owner_str or "Standard-Gewerbe" in owner_str:
+        owner_type_score = 2
+    else:
+        owner_type_score = 1
+
+    # Extract ESG score (max 3)
+    esg_str = answers["esg"]
+    if esg_str.startswith("Yes") or esg_str.startswith("Oui") or esg_str.startswith("Ja"):
+        esg_score = 3
+    elif esg_str.startswith("Not sure") or esg_str.startswith("Incertain") or esg_str.startswith("Unsicher"):
+        esg_score = 2
+    else:
+        esg_score = 1
+
+    # Extract spend score (max 4)
+    spend_str = answers["spend"]
+    if "Above 800k" in spend_str or "Plus de 800k" in spend_str or "Über 800k" in spend_str:
+        spend_score = 4
+    elif "300k" in spend_str and "800k" in spend_str:
+        spend_score = 3
+    elif "100k" in spend_str and "300k" in spend_str:
+        spend_score = 2
+    else:
+        spend_score = 1
+
+    # Daytime score (max 3)
+    daytime_pct = answers["daytime"]
+    if daytime_pct >= 75:
+        daytime_score = 3
+    elif daytime_pct >= 50:
+        daytime_score = 2
+    elif daytime_pct >= 25:
+        daytime_score = 1
+    else:
+        daytime_score = 0
+
+    # Seasonality score (max 3)
+    season_str = answers["season"]
+    if "Low" in season_str or "Faible" in season_str or "Geringe" in season_str:
+        season_score = 3
+    elif "Moderate" in season_str or "modérée" in season_str or "Mäßige" in season_str:
+        season_score = 2
+    else:
+        season_score = 1
+
+    # 24/7 loads score (max 3)
+    loads_str = answers["loads"]
+    if loads_str.startswith("Yes") or loads_str.startswith("Oui") or loads_str.startswith("Ja"):
+        loads_score = 3
+    else:
+        loads_score = 1
+
+    # Get weights
+    weights = st.session_state.get("weights", DEFAULT_WEIGHTS)
+    structure_weight = weights.get("structure", DEFAULT_WEIGHTS["structure"])
+    consumption_weight = weights.get("consumption", DEFAULT_WEIGHTS["consumption"])
+
+    # Sub-weights
+    sub_roof = weights.get("sub_roof", DEFAULT_WEIGHTS["sub_roof"])
+    sub_owner = weights.get("sub_owner", DEFAULT_WEIGHTS["sub_owner"])
+    sub_esg = weights.get("sub_esg", DEFAULT_WEIGHTS["sub_esg"])
+    sub_spend = weights.get("sub_spend", DEFAULT_WEIGHTS["sub_spend"])
+    sub_daytime = weights.get("sub_daytime", DEFAULT_WEIGHTS["sub_daytime"])
+    sub_season = weights.get("sub_season", DEFAULT_WEIGHTS["sub_season"])
+    sub_loads = weights.get("sub_loads", DEFAULT_WEIGHTS["sub_loads"])
+
+    # Normalized scores (0-1)
+    roof_norm = roof_score / 3 if roof_score > 0 else 0
+    owner_norm = owner_type_score / 3
+    esg_norm = esg_score / 3
+    spend_norm = spend_score / 4
+    daytime_norm = daytime_score / 3
+    season_norm = season_score / 3
+    loads_norm = loads_score / 3
+
+    # Category scores (0-100)
+    A_norm = sub_roof * roof_norm + sub_owner * owner_norm + sub_esg * esg_norm
+    B_norm = sub_spend * spend_norm + sub_daytime * daytime_norm + sub_season * season_norm + sub_loads * loads_norm
+
+    return {
+        "roof": {"score": roof_score, "max": 3, "normalized": roof_norm * 100, "weight": sub_roof},
+        "owner": {"score": owner_type_score, "max": 3, "normalized": owner_norm * 100, "weight": sub_owner},
+        "esg": {"score": esg_score, "max": 3, "normalized": esg_norm * 100, "weight": sub_esg},
+        "spend": {"score": spend_score, "max": 4, "normalized": spend_norm * 100, "weight": sub_spend},
+        "daytime": {"score": daytime_score, "max": 3, "normalized": daytime_norm * 100, "weight": sub_daytime},
+        "season": {"score": season_score, "max": 3, "normalized": season_norm * 100, "weight": sub_season},
+        "loads": {"score": loads_score, "max": 3, "normalized": loads_norm * 100, "weight": sub_loads},
+        "structure_total": A_norm * 100,
+        "consumption_total": B_norm * 100,
+        "structure_weight": structure_weight,
+        "consumption_weight": consumption_weight,
+    }
+
 
 def get_score_interpretation(score, lang="en"):
     """Return interpretation and recommendation based on score"""
@@ -1544,73 +1696,327 @@ def page_questions():
 
 def page_results():
     L = st.session_state["language"]
-    st.title(TEXT["results_title"][L])
-    st.markdown("---")
 
-    # Calculate all scores first
+    # ─────────────────────────────────────────────────────────
+    # RESULTS PAGE CSS
+    # ─────────────────────────────────────────────────────────
+    st.markdown("""
+    <style>
+        .score-hero {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .score-hero-value {
+            font-size: 4rem;
+            font-weight: 800;
+            color: #00FF40;
+            margin: 0;
+            line-height: 1;
+        }
+        .score-hero-label {
+            font-size: 1rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+        .score-hero-interpretation {
+            font-size: 1.5rem;
+            color: #fff;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+        .score-hero-recommendation {
+            font-size: 1rem;
+            color: #aaa;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+        .category-card {
+            background: #fafafa;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .category-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .category-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00FF40;
+        }
+        .progress-bar-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 12px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        .progress-green { background: linear-gradient(90deg, #00FF40, #00DD38); }
+        .progress-yellow { background: linear-gradient(90deg, #FFD700, #FFA500); }
+        .progress-orange { background: linear-gradient(90deg, #FFA500, #FF6B00); }
+        .progress-red { background: linear-gradient(90deg, #FF6B6B, #EE4444); }
+        .factor-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .factor-row:last-child {
+            border-bottom: none;
+        }
+        .factor-name {
+            font-size: 0.95rem;
+            color: #333;
+            flex: 1;
+        }
+        .factor-score {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #666;
+            min-width: 60px;
+            text-align: right;
+        }
+        .factor-bar {
+            flex: 2;
+            margin: 0 1rem;
+        }
+        .insight-card {
+            background: #f0fff4;
+            border: 1px solid #00FF40;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .insight-card.warning {
+            background: #fff8e6;
+            border-color: #FFD700;
+        }
+        .insight-icon {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+        .site-divider {
+            border: none;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00FF40, transparent);
+            margin: 2.5rem 0;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.title(TEXT["results_title"][L])
+
+    # Calculate all scores
     all_scores = []
-    
+    all_details = []
+
     for idx, site in enumerate(st.session_state["addresses"]):
         ans = st.session_state["answers"][idx]
-        
-        # Recalculate roof score from the actual roof area
         roof_score = compute_roof_score(site.get("roof_area"))
-        
-        # Calculate the final score
         final_score = compute_final_score(ans, roof_score)
+        details = compute_detailed_scores(ans, roof_score)
         all_scores.append(final_score)
+        all_details.append(details)
+
+    # ─────────────────────────────────────────────────────────
+    # DISPLAY EACH SITE
+    # ─────────────────────────────────────────────────────────
+    for idx, site in enumerate(st.session_state["addresses"]):
+        ans = st.session_state["answers"][idx]
+        final_score = all_scores[idx]
+        details = all_details[idx]
         interpretation, recommendation, emoji = get_score_interpretation(final_score, L)
-        
-        st.markdown(f"## 📍 {site['address']} ({site['canton']})")
-        
-        # Display the main score prominently
-        col_score, col_interp = st.columns([1, 2])
-        
-        with col_score:
-            st.metric(TEXT["score_label"][L], f"{final_score}/100")
-        
-        with col_interp:
-            st.markdown(f"### {emoji} {interpretation}")
-            st.write(f"**{TEXT['recommendation_label'][L]}:** {recommendation}")
-        
-        st.markdown("---")
-        
-        # Detailed breakdown
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write(f"**{TEXT['roof_score_label'][L]}:** {roof_score}/3")
-            if site.get('roof_area'):
-                st.write(f"*({TEXT['roof_area_label'][L]}: {site['roof_area']} m²)*")
-            st.write(f"**{TEXT['owner_type_label'][L]}:** {ans['owner_type'].split('—')[0].strip()}")
-            st.write(f"**{TEXT['esg_label'][L]}:** {ans['esg'].split('—')[0].strip()}")
-        
-        with col2:
-            st.write(f"**{TEXT['spend_label'][L]}:** {ans['spend']}")
-            st.write(f"**{TEXT['daytime_label'][L]}:** {ans['daytime']}%")
-            st.write(f"**{TEXT['season_label'][L]}:** {ans['season'].split('—')[0].strip()}")
-            st.write(f"**{TEXT['loads_label'][L]}:** {ans['loads'].split('—')[0].strip()}")
-        
-        st.markdown("---")
-    
-    # If multiple addresses, show composite score
+
+        # Site header
+        if idx > 0:
+            st.markdown('<hr class="site-divider">', unsafe_allow_html=True)
+
+        st.markdown(f"### 📍 {site['address']} ({site['canton']})")
+
+        # ── HERO SCORE CARD ──
+        score_color = "#00FF40" if final_score >= 70 else "#FFD700" if final_score >= 55 else "#FFA500" if final_score >= 40 else "#FF6B6B"
+        st.markdown(f"""
+        <div class="score-hero">
+            <p class="score-hero-value" style="color: {score_color};">{final_score}</p>
+            <p class="score-hero-label">{TEXT["score_label"][L]} / 100</p>
+            <p class="score-hero-interpretation">{emoji} {interpretation}</p>
+            <p class="score-hero-recommendation">{recommendation}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── CATEGORY BREAKDOWN ──
+        col_struct, col_cons = st.columns(2)
+
+        with col_struct:
+            struct_score = round(details["structure_total"], 1)
+            struct_color = "progress-green" if struct_score >= 70 else "progress-yellow" if struct_score >= 50 else "progress-orange" if struct_score >= 30 else "progress-red"
+            st.markdown(f"""
+            <div class="category-card">
+                <div class="category-header">
+                    <span class="category-title">🏗️ {TEXT["structure_score_label"][L]}</span>
+                    <span class="category-score">{struct_score}%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill {struct_color}" style="width: {struct_score}%;"></div>
+                </div>
+                <small style="color: #888;">Weight: {round(details["structure_weight"] * 100)}%</small>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_cons:
+            cons_score = round(details["consumption_total"], 1)
+            cons_color = "progress-green" if cons_score >= 70 else "progress-yellow" if cons_score >= 50 else "progress-orange" if cons_score >= 30 else "progress-red"
+            st.markdown(f"""
+            <div class="category-card">
+                <div class="category-header">
+                    <span class="category-title">⚡ {TEXT["consumption_score_label"][L]}</span>
+                    <span class="category-score">{cons_score}%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill {cons_color}" style="width: {cons_score}%;"></div>
+                </div>
+                <small style="color: #888;">Weight: {round(details["consumption_weight"] * 100)}%</small>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── DETAILED FACTOR ANALYSIS ──
+        with st.expander(f"📊 {TEXT['factor_analysis'][L]}", expanded=True):
+            # Structure factors
+            st.markdown(f"**🏗️ {TEXT['structure_score_label'][L]}**")
+
+            factors_structure = [
+                (TEXT["roof_score_label"][L], details["roof"], f"{site.get('roof_area', 'N/A')} m²"),
+                (TEXT["owner_type_label"][L], details["owner"], ans['owner_type'].split('—')[0].strip()),
+                (TEXT["esg_label"][L], details["esg"], ans['esg'].split('—')[0].strip()),
+            ]
+
+            for name, data, value in factors_structure:
+                bar_color = "progress-green" if data["normalized"] >= 66 else "progress-yellow" if data["normalized"] >= 33 else "progress-red"
+                st.markdown(f"""
+                <div class="factor-row">
+                    <span class="factor-name">{name}</span>
+                    <div class="factor-bar">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill {bar_color}" style="width: {data['normalized']}%;"></div>
+                        </div>
+                    </div>
+                    <span class="factor-score">{data['score']}/{data['max']}</span>
+                </div>
+                """, unsafe_allow_html=True)
+                st.caption(f"↳ {value}")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(f"**⚡ {TEXT['consumption_score_label'][L]}**")
+
+            factors_consumption = [
+                (TEXT["spend_label"][L], details["spend"], ans['spend']),
+                (TEXT["daytime_label"][L], details["daytime"], f"{ans['daytime']}%"),
+                (TEXT["season_label"][L], details["season"], ans['season'].split('—')[0].strip()),
+                (TEXT["loads_label"][L], details["loads"], ans['loads'].split('—')[0].strip()),
+            ]
+
+            for name, data, value in factors_consumption:
+                bar_color = "progress-green" if data["normalized"] >= 66 else "progress-yellow" if data["normalized"] >= 33 else "progress-red"
+                st.markdown(f"""
+                <div class="factor-row">
+                    <span class="factor-name">{name}</span>
+                    <div class="factor-bar">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill {bar_color}" style="width: {data['normalized']}%;"></div>
+                        </div>
+                    </div>
+                    <span class="factor-score">{data['score']}/{data['max']}</span>
+                </div>
+                """, unsafe_allow_html=True)
+                st.caption(f"↳ {value}")
+
+        # ── STRENGTHS & AREAS TO WATCH ──
+        with st.expander(f"💡 {TEXT['strengths'][L]} & {TEXT['areas_to_watch'][L]}", expanded=False):
+            all_factors = [
+                (TEXT["roof_score_label"][L], details["roof"]["normalized"]),
+                (TEXT["owner_type_label"][L], details["owner"]["normalized"]),
+                (TEXT["esg_label"][L], details["esg"]["normalized"]),
+                (TEXT["spend_label"][L], details["spend"]["normalized"]),
+                (TEXT["daytime_label"][L], details["daytime"]["normalized"]),
+                (TEXT["season_label"][L], details["season"]["normalized"]),
+                (TEXT["loads_label"][L], details["loads"]["normalized"]),
+            ]
+
+            strengths = [f for f in all_factors if f[1] >= 66]
+            weaknesses = [f for f in all_factors if f[1] < 50]
+
+            col_str, col_weak = st.columns(2)
+
+            with col_str:
+                st.markdown(f"**✅ {TEXT['strengths'][L]}**")
+                if strengths:
+                    for name, score in sorted(strengths, key=lambda x: -x[1]):
+                        st.markdown(f"""
+                        <div class="insight-card">
+                            <span class="insight-icon">✓</span>{name} ({round(score)}%)
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.caption("No standout strengths")
+
+            with col_weak:
+                st.markdown(f"**⚠️ {TEXT['areas_to_watch'][L]}**")
+                if weaknesses:
+                    for name, score in sorted(weaknesses, key=lambda x: x[1]):
+                        st.markdown(f"""
+                        <div class="insight-card warning">
+                            <span class="insight-icon">!</span>{name} ({round(score)}%)
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.caption("No significant weaknesses")
+
+    # ─────────────────────────────────────────────────────────
+    # COMPOSITE SCORE (multiple sites)
+    # ─────────────────────────────────────────────────────────
     if len(st.session_state["addresses"]) > 1:
-        composite_score = sum(all_scores) / len(all_scores)
+        st.markdown('<hr class="site-divider">', unsafe_allow_html=True)
+        composite_score = round(sum(all_scores) / len(all_scores), 1)
         composite_interpretation, composite_recommendation, composite_emoji = get_score_interpretation(composite_score, L)
-        
+
         st.markdown(f"## 🏢 {TEXT['composite_score'][L]}")
         st.caption(TEXT['composite_desc'][L])
-        
-        col_score, col_interp = st.columns([1, 2])
-        
-        with col_score:
-            st.metric(TEXT["score_label"][L], f"{round(composite_score, 1)}/100")
-        
-        with col_interp:
-            st.markdown(f"### {composite_emoji} {composite_interpretation}")
-            st.write(f"**{TEXT['recommendation_label'][L]}:** {composite_recommendation}")
-        
-        st.markdown("---")
+
+        score_color = "#00FF40" if composite_score >= 70 else "#FFD700" if composite_score >= 55 else "#FFA500" if composite_score >= 40 else "#FF6B6B"
+        st.markdown(f"""
+        <div class="score-hero">
+            <p class="score-hero-value" style="color: {score_color};">{composite_score}</p>
+            <p class="score-hero-label">{TEXT["score_label"][L]} / 100</p>
+            <p class="score-hero-interpretation">{composite_emoji} {composite_interpretation}</p>
+            <p class="score-hero-recommendation">{composite_recommendation}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Summary table
+        st.markdown("### Site Comparison")
+        for idx, site in enumerate(st.session_state["addresses"]):
+            score = all_scores[idx]
+            interp, _, em = get_score_interpretation(score, L)
+            st.markdown(f"- **{site['address']}**: {score}/100 {em} *({interp})*")
 
     restart_button()
 
