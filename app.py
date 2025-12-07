@@ -731,7 +731,7 @@ def compute_final_score(answers, roof_score):
     season_str = answers["season"]
     if "Low" in season_str or "Faible" in season_str or "Geringe" in season_str:
         season_score = 3
-    elif "Moderate" in season_str or "Modérée" in season_str or "Mäßige" in season_str:
+    elif "Moderate" in season_str or "modérée" in season_str or "Mäßige" in season_str:
         season_score = 2
     else:
         season_score = 1
@@ -1060,8 +1060,6 @@ def page_address_entry():
                             lookup_errors.append(data.get("error"))
                     if entry.get("roof_area") is None:
                         all_success = False
-                        if data and data.get("error"):
-                            lookup_errors.append(data.get("error"))
 
         if all_success:
             status_placeholder.success("✅ Data loaded successfully! Proceeding...")
