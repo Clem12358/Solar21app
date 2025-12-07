@@ -1711,28 +1711,28 @@ def page_results():
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
         .score-hero-value {
-            font-size: 4rem;
-            font-weight: 800;
-            color: #00FF40;
-            margin: 0;
-            line-height: 1;
+            font-size: 4rem !important;
+            font-weight: 800 !important;
+            color: #00FF40 !important;
+            margin: 0 !important;
+            line-height: 1 !important;
         }
         .score-hero-label {
-            font-size: 1rem;
-            color: #888;
-            margin-top: 0.5rem;
+            font-size: 1rem !important;
+            color: #888 !important;
+            margin-top: 0.5rem !important;
         }
         .score-hero-interpretation {
-            font-size: 1.5rem;
-            color: #fff;
-            margin-top: 1rem;
-            font-weight: 600;
+            font-size: 1.5rem !important;
+            color: #fff !important;
+            margin-top: 1rem !important;
+            font-weight: 600 !important;
         }
         .score-hero-recommendation {
-            font-size: 1rem;
-            color: #aaa;
-            margin-top: 0.5rem;
-            font-style: italic;
+            font-size: 1rem !important;
+            color: #aaa !important;
+            margin-top: 0.5rem !important;
+            font-style: italic !important;
         }
         .category-card {
             background: #fafafa;
@@ -1856,7 +1856,7 @@ def page_results():
         score_color = "#00FF40" if final_score >= 70 else "#FFD700" if final_score >= 55 else "#FFA500" if final_score >= 40 else "#FF6B6B"
         st.markdown(f"""
         <div class="score-hero">
-            <p class="score-hero-value" style="color: {score_color};">{final_score}</p>
+            <p class="score-hero-value" style="color: {score_color} !important;">{final_score}</p>
             <p class="score-hero-label">{TEXT["score_label"][L]} / 100</p>
             <p class="score-hero-interpretation">{emoji} {interpretation}</p>
             <p class="score-hero-recommendation">{recommendation}</p>
@@ -2004,7 +2004,7 @@ def page_results():
         score_color = "#00FF40" if composite_score >= 70 else "#FFD700" if composite_score >= 55 else "#FFA500" if composite_score >= 40 else "#FF6B6B"
         st.markdown(f"""
         <div class="score-hero">
-            <p class="score-hero-value" style="color: {score_color};">{composite_score}</p>
+            <p class="score-hero-value" style="color: {score_color} !important;">{composite_score}</p>
             <p class="score-hero-label">{TEXT["score_label"][L]} / 100</p>
             <p class="score-hero-interpretation">{composite_emoji} {composite_interpretation}</p>
             <p class="score-hero-recommendation">{composite_recommendation}</p>
