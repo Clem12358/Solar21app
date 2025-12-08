@@ -1,5 +1,6 @@
 import json
 import os
+import base64
 from pathlib import Path
 
 import streamlit as st
@@ -12,6 +13,116 @@ st.set_page_config(
     layout="wide",
     page_title="Solar21 Evaluation Tool",
 )
+
+# -------------------------------------------------------
+# INTRO VIDEO (plays once on first visit)
+# -------------------------------------------------------
+if "intro_video_watched" not in st.session_state:
+    st.session_state.intro_video_watched = False
+
+if not st.session_state.intro_video_watched:
+    # Find the video file
+    video_paths = ["My Movie.mp4", "Solar21app/My Movie.mp4", "./My Movie.mp4"]
+    video_path = None
+    for vp in video_paths:
+        if os.path.exists(vp):
+            video_path = vp
+            break
+
+    if video_path:
+        # Read and encode video as base64
+        with open(video_path, "rb") as video_file:
+            video_bytes = video_file.read()
+            video_base64 = base64.b64encode(video_bytes).decode()
+
+        # Create fullscreen video player with autoplay
+        st.markdown("""
+        <style>
+            /* Hide everything except our video container */
+            .block-container { padding: 0 !important; max-width: 100% !important; }
+            header, footer, [data-testid="stHeader"], [data-testid="stToolbar"] { display: none !important; }
+            [data-testid="stAppViewContainer"] {
+                background: #000 !important;
+                padding: 0 !important;
+            }
+            html, body, [data-testid="stApp"] {
+                background: #000 !important;
+                overflow: hidden !important;
+            }
+
+            .video-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: #000;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+
+            .video-container video {
+                max-width: 100%;
+                max-height: 90vh;
+                object-fit: contain;
+            }
+
+            .skip-button {
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                padding: 10px 25px;
+                font-size: 14px;
+                cursor: pointer;
+                border-radius: 25px;
+                transition: all 0.3s ease;
+                z-index: 10000;
+            }
+
+            .skip-button:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div class="video-container">
+            <video id="introVideo" autoplay playsinline>
+                <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <script>
+            const video = document.getElementById('introVideo');
+
+            // When video ends, click the hidden button to trigger state change
+            video.addEventListener('ended', function() {{
+                // Find and click the skip button to trigger Streamlit rerun
+                const skipBtn = window.parent.document.querySelector('button[kind="secondary"]');
+                if (skipBtn) skipBtn.click();
+            }});
+        </script>
+        """, unsafe_allow_html=True)
+
+        # Skip button (also serves as the trigger when video ends)
+        col1, col2, col3 = st.columns([6, 1, 1])
+        with col3:
+            if st.button("Skip ⏭", key="skip_intro", type="secondary"):
+                st.session_state.intro_video_watched = True
+                st.rerun()
+
+        # Stop execution here - don't show the rest of the app
+        st.stop()
+    else:
+        # Video not found, skip intro
+        st.session_state.intro_video_watched = True
 
 # -------------------------------------------------------
 # GLOBAL CSS (improved styling)
