@@ -37,82 +37,33 @@ if not st.session_state.intro_video_watched:
             break
 
     if video_path:
-        # Read video as base64
-        with open(video_path, "rb") as video_file:
-            video_bytes = video_file.read()
-            video_base64 = base64.b64encode(video_bytes).decode()
-
-        # Get the base URL for redirect
-        base_url = st.query_params.to_dict()
-
-        # Simple fullscreen video page
+        # Dark background styling
         st.markdown("""
         <style>
-            #root > div:first-child,
-            .block-container,
-            .stApp > header,
-            [data-testid="stHeader"],
-            [data-testid="stToolbar"],
-            [data-testid="stDecoration"],
-            footer {
-                display: none !important;
-            }
-            .stApp, [data-testid="stAppViewContainer"], .main {
-                background: #000 !important;
-                padding: 0 !important;
-            }
-            .video-fullscreen {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
-                background: #000;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 9999;
-            }
-            .video-fullscreen video {
-                max-width: 100%;
-                max-height: 100%;
-            }
-            .skip-button {
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                background: rgba(255,255,255,0.2);
-                color: white;
-                border: 1px solid rgba(255,255,255,0.4);
-                padding: 12px 28px;
-                font-size: 14px;
-                cursor: pointer;
-                border-radius: 25px;
-                z-index: 10000;
-                text-decoration: none;
-            }
-            .skip-button:hover {
-                background: rgba(255,255,255,0.4);
-            }
+            [data-testid="stHeader"], header, [data-testid="stToolbar"] { display: none !important; }
+            .stApp { background: #000 !important; }
+            .block-container { padding-top: 1rem !important; }
         </style>
-        """ + f"""
-        <div class="video-fullscreen">
-            <video id="myVideo" autoplay muted playsinline onended="videoEnded()">
-                <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-            </video>
-        </div>
-        <a href="?video_ended=true" class="skip-button">Skip ⏭</a>
-        <script>
-            function videoEnded() {{
-                window.location.href = '?video_ended=true';
-            }}
-            // Ensure video plays
-            var vid = document.getElementById('myVideo');
-            if (vid) {{
-                vid.play();
-            }}
-        </script>
         """, unsafe_allow_html=True)
+
+        # Center the video
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col2:
+            # Use Streamlit's native video player with autoplay
+            st.video(video_path, autoplay=True, muted=True)
+
+            # Skip button
+            if st.button("Skip Video ⏭", use_container_width=True):
+                st.session_state.intro_video_watched = True
+                st.rerun()
+
+            # Link for when video ends (user can click or wait)
+            st.markdown(
+                '<p style="text-align: center; margin-top: 20px;">'
+                '<a href="?video_ended=true" style="color: #888; text-decoration: none;">Click here when video ends →</a>'
+                '</p>',
+                unsafe_allow_html=True
+            )
 
         st.stop()
     else:
