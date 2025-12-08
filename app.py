@@ -324,40 +324,50 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# LOGO (centered)
+# LOGO (centered with high quality)
 # -------------------------------------------------------
 
-# Center the logo using columns
-logo_col1, logo_col2, logo_col3 = st.columns([1, 1, 1])
-with logo_col2:
-    # Try multiple possible paths for the logo
-    possible_paths = [
-        "Solar21app/solar21_logo.png",
-        "solar21_logo.png",
-        "./solar21_logo.png",
-        "../solar21_logo.png"
-    ]
-    
-    logo_loaded = False
-    for path in possible_paths:
-        if os.path.exists(path):
-            # Center the image within the column
-            st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
-            st.image(path, width=200)
-            st.markdown('</div>', unsafe_allow_html=True)
-            logo_loaded = True
-            break
-    
-    if not logo_loaded:
+# Try multiple possible paths for the logo
+possible_logo_paths = [
+    "solar21_logo.png",
+    "Solar21app/solar21_logo.png",
+    "./solar21_logo.png",
+    "../solar21_logo.png"
+]
+
+logo_loaded = False
+for logo_path in possible_logo_paths:
+    if os.path.exists(logo_path):
+        # Load logo as base64 for high quality display
+        with open(logo_path, "rb") as img_file:
+            logo_base64 = base64.b64encode(img_file.read()).decode()
+
+        # Display centered logo using HTML (better centering than st.columns)
         st.markdown(
-            """
-            <div style="text-align:center; margin-bottom:20px;">
-                <h1 style="color: #1a1a1a; margin: 0; font-size: 2rem;">Solar21</h1>
-                <p style="color: #666; font-size: 0.9rem;">Evaluation Tool</p>
+            f"""
+            <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px;">
+                <img src="data:image/png;base64,{logo_base64}"
+                     style="width: 250px; height: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;"
+                     alt="Solar21 Logo">
             </div>
             """,
             unsafe_allow_html=True
         )
+        logo_loaded = True
+        break
+
+if not logo_loaded:
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px;">
+            <div style="text-align: center;">
+                <h1 style="color: #1a1a1a; margin: 0; font-size: 2rem;">Solar21</h1>
+                <p style="color: #666; font-size: 0.9rem;">Evaluation Tool</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 st.markdown("<br>", unsafe_allow_html=True)
 
 # -------------------------------------------------------
