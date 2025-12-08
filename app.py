@@ -41,120 +41,122 @@ if not st.session_state.intro_video_watched:
             video_bytes = video_file.read()
             video_base64 = base64.b64encode(video_bytes).decode()
 
-        # Create fullscreen video player with autoplay (muted required for autoplay)
-        st.markdown("""
-        <style>
-            /* Hide everything except our video container */
-            .block-container { padding: 0 !important; max-width: 100% !important; }
-            header, footer, [data-testid="stHeader"], [data-testid="stToolbar"] { display: none !important; }
-            [data-testid="stAppViewContainer"] {
-                background: #000 !important;
-                padding: 0 !important;
-            }
-            html, body, [data-testid="stApp"] {
-                background: #000 !important;
-                overflow: hidden !important;
-            }
-
-            .video-container {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
-                background: #000;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                z-index: 9999;
-            }
-
-            .video-container video {
-                max-width: 100%;
-                max-height: 90vh;
-                object-fit: contain;
-            }
-
-            /* Ensure Streamlit button is visible */
-            .stButton {
-                position: fixed !important;
-                bottom: 30px !important;
-                right: 30px !important;
-                z-index: 10001 !important;
-            }
-
-            .stButton > button {
-                background: rgba(255, 255, 255, 0.2) !important;
-                color: white !important;
-                border: 1px solid rgba(255, 255, 255, 0.4) !important;
-                padding: 10px 25px !important;
-                font-size: 14px !important;
-                border-radius: 25px !important;
-            }
-
-            .stButton > button:hover {
-                background: rgba(255, 255, 255, 0.4) !important;
-                color: white !important;
-            }
-        </style>
-        """, unsafe_allow_html=True)
-
         # Use st.components.v1.html for proper JavaScript execution
         import streamlit.components.v1 as components
 
+        # Fullscreen video with autoplay (muted required by browsers for autoplay)
         video_html = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <style>
-                body {{
+                * {{
                     margin: 0;
                     padding: 0;
+                    box-sizing: border-box;
+                }}
+                html, body {{
+                    width: 100%;
+                    height: 100%;
+                    background: #000;
+                    overflow: hidden;
+                }}
+                .video-wrapper {{
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
                     background: #000;
                     display: flex;
                     justify-content: center;
                     align-items: center;
-                    height: 100vh;
-                    overflow: hidden;
+                    z-index: 9999;
                 }}
                 video {{
                     max-width: 100%;
                     max-height: 100%;
                     object-fit: contain;
                 }}
+                .skip-btn {{
+                    position: fixed;
+                    bottom: 30px;
+                    right: 30px;
+                    background: rgba(255, 255, 255, 0.2);
+                    color: white;
+                    border: 1px solid rgba(255, 255, 255, 0.4);
+                    padding: 12px 28px;
+                    font-size: 14px;
+                    font-family: sans-serif;
+                    cursor: pointer;
+                    border-radius: 25px;
+                    z-index: 10000;
+                    transition: background 0.3s;
+                }}
+                .skip-btn:hover {{
+                    background: rgba(255, 255, 255, 0.4);
+                }}
             </style>
         </head>
         <body>
-            <video id="introVideo" autoplay muted playsinline>
-                <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-            </video>
+            <div class="video-wrapper">
+                <video id="introVideo" autoplay muted playsinline>
+                    <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+                </video>
+            </div>
+            <button class="skip-btn" onclick="skipVideo()">Skip ⏭</button>
             <script>
                 const video = document.getElementById('introVideo');
 
-                // Try to unmute
+                // Force play on load
+                document.addEventListener('DOMContentLoaded', function() {{
+                    video.play().catch(function(e) {{
+                        console.log('Autoplay prevented:', e);
+                    }});
+                }});
+
+                // Also try to play immediately
+                video.play().catch(function(e) {{
+                    console.log('Autoplay prevented:', e);
+                }});
+
+                // Try to unmute after a short delay
                 setTimeout(function() {{
                     video.muted = false;
-                }}, 100);
+                }}, 500);
 
-                // When video ends, redirect with query param to trigger Streamlit rerun
+                function skipVideo() {{
+                    goToApp();
+                }}
+
+                // When video ends, go to app
                 video.addEventListener('ended', function() {{
-                    // Get current URL and add query param
+                    goToApp();
+                }});
+
+                function goToApp() {{
                     const url = new URL(window.parent.location.href);
                     url.searchParams.set('video_ended', 'true');
                     window.parent.location.href = url.toString();
-                }});
+                }}
             </script>
         </body>
         </html>
         """
 
-        components.html(video_html, height=600, scrolling=False)
+        # Hide Streamlit UI elements during video
+        st.markdown("""
+        <style>
+            .block-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+            header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
+            [data-testid="stAppViewContainer"] { background: #000 !important; padding: 0 !important; }
+            html, body, [data-testid="stApp"] { background: #000 !important; overflow: hidden !important; }
+            .stMainBlockContainer { padding: 0 !important; }
+            iframe { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; border: none !important; }
+        </style>
+        """, unsafe_allow_html=True)
 
-        # Skip button - visible and clickable
-        if st.button("Skip ⏭", key="skip_intro"):
-            st.session_state.intro_video_watched = True
-            st.rerun()
+        components.html(video_html, height=1000, scrolling=False)
 
         # Stop execution here - don't show the rest of the app
         st.stop()
