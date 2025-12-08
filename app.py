@@ -35,7 +35,7 @@ if not st.session_state.intro_video_watched:
             video_bytes = video_file.read()
             video_base64 = base64.b64encode(video_bytes).decode()
 
-        # Create fullscreen video player with autoplay
+        # Create fullscreen video player with autoplay (muted required for autoplay)
         st.markdown("""
         <style>
             /* Hide everything except our video container */
@@ -70,30 +70,33 @@ if not st.session_state.intro_video_watched:
                 object-fit: contain;
             }
 
-            .skip-button {
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                background: rgba(255, 255, 255, 0.2);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.4);
-                padding: 10px 25px;
-                font-size: 14px;
-                cursor: pointer;
-                border-radius: 25px;
-                transition: all 0.3s ease;
-                z-index: 10000;
+            /* Ensure Streamlit button is visible */
+            .stButton {
+                position: fixed !important;
+                bottom: 30px !important;
+                right: 30px !important;
+                z-index: 10001 !important;
             }
 
-            .skip-button:hover {
-                background: rgba(255, 255, 255, 0.3);
+            .stButton > button {
+                background: rgba(255, 255, 255, 0.2) !important;
+                color: white !important;
+                border: 1px solid rgba(255, 255, 255, 0.4) !important;
+                padding: 10px 25px !important;
+                font-size: 14px !important;
+                border-radius: 25px !important;
+            }
+
+            .stButton > button:hover {
+                background: rgba(255, 255, 255, 0.4) !important;
+                color: white !important;
             }
         </style>
         """, unsafe_allow_html=True)
 
         st.markdown(f"""
         <div class="video-container">
-            <video id="introVideo" autoplay playsinline>
+            <video id="introVideo" autoplay muted playsinline>
                 <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
@@ -102,21 +105,28 @@ if not st.session_state.intro_video_watched:
         <script>
             const video = document.getElementById('introVideo');
 
-            // When video ends, click the hidden button to trigger state change
+            // Try to unmute after a short delay (some browsers allow this after user interaction)
+            setTimeout(function() {{
+                video.muted = false;
+            }}, 100);
+
+            // When video ends, click the skip button to trigger state change
             video.addEventListener('ended', function() {{
-                // Find and click the skip button to trigger Streamlit rerun
-                const skipBtn = window.parent.document.querySelector('button[kind="secondary"]');
-                if (skipBtn) skipBtn.click();
+                // Find and click the Streamlit button
+                const buttons = window.parent.document.querySelectorAll('button');
+                buttons.forEach(function(btn) {{
+                    if (btn.innerText.includes('Skip')) {{
+                        btn.click();
+                    }}
+                }});
             }});
         </script>
         """, unsafe_allow_html=True)
 
-        # Skip button (also serves as the trigger when video ends)
-        col1, col2, col3 = st.columns([6, 1, 1])
-        with col3:
-            if st.button("Skip ⏭", key="skip_intro", type="secondary"):
-                st.session_state.intro_video_watched = True
-                st.rerun()
+        # Skip button - visible and clickable
+        if st.button("Skip ⏭", key="skip_intro"):
+            st.session_state.intro_video_watched = True
+            st.rerun()
 
         # Stop execution here - don't show the rest of the app
         st.stop()
