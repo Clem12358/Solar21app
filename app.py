@@ -37,36 +37,102 @@ if not st.session_state.intro_video_watched:
             break
 
     if video_path:
-        # Dark background styling
+        # Read and encode video as base64
+        with open(video_path, "rb") as video_file:
+            video_bytes = video_file.read()
+            video_base64 = base64.b64encode(video_bytes).decode()
+
+        # Create fullscreen video player with autoplay (muted required for autoplay)
         st.markdown("""
         <style>
-            [data-testid="stHeader"], header, [data-testid="stToolbar"] { display: none !important; }
-            .stApp { background: #000 !important; }
-            .block-container { padding-top: 1rem !important; }
+            /* Hide everything except our video container */
+            .block-container { padding: 0 !important; max-width: 100% !important; }
+            header, footer, [data-testid="stHeader"], [data-testid="stToolbar"] { display: none !important; }
+            [data-testid="stAppViewContainer"] {
+                background: #000 !important;
+                padding: 0 !important;
+            }
+            html, body, [data-testid="stApp"] {
+                background: #000 !important;
+                overflow: hidden !important;
+            }
+
+            .video-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: #000;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+
+            .video-container video {
+                max-width: 100%;
+                max-height: 90vh;
+                object-fit: contain;
+            }
+
+            /* Ensure Streamlit button is visible */
+            .stButton {
+                position: fixed !important;
+                bottom: 30px !important;
+                right: 30px !important;
+                z-index: 10001 !important;
+            }
+
+            .stButton > button {
+                background: rgba(255, 255, 255, 0.2) !important;
+                color: white !important;
+                border: 1px solid rgba(255, 255, 255, 0.4) !important;
+                padding: 10px 25px !important;
+                font-size: 14px !important;
+                border-radius: 25px !important;
+            }
+
+            .stButton > button:hover {
+                background: rgba(255, 255, 255, 0.4) !important;
+                color: white !important;
+            }
         </style>
         """, unsafe_allow_html=True)
 
-        # Center the video
-        col1, col2, col3 = st.columns([1, 3, 1])
-        with col2:
-            # Use Streamlit's native video player with autoplay
-            st.video(video_path, autoplay=True, muted=True)
+        st.markdown(f"""
+        <div class="video-container">
+            <video id="introVideo" autoplay muted playsinline>
+                <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
 
-            # Skip button
-            if st.button("Skip Video ⏭", use_container_width=True):
-                st.session_state.intro_video_watched = True
-                st.rerun()
+        <script>
+            const video = document.getElementById('introVideo');
 
-            # Link for when video ends (user can click or wait)
-            st.markdown(
-                '<p style="text-align: center; margin-top: 20px;">'
-                '<a href="?video_ended=true" style="color: #888; text-decoration: none;">Click here when video ends →</a>'
-                '</p>',
-                unsafe_allow_html=True
-            )
+            // Try to unmute after a short delay
+            setTimeout(function() {{
+                video.muted = false;
+            }}, 100);
 
+            // When video ends, redirect to trigger page reload with query param
+            video.addEventListener('ended', function() {{
+                window.location.href = window.location.pathname + '?video_ended=true';
+            }});
+        </script>
+        """, unsafe_allow_html=True)
+
+        # Skip button - visible and clickable
+        if st.button("Skip ⏭", key="skip_intro"):
+            st.session_state.intro_video_watched = True
+            st.rerun()
+
+        # Stop execution here - don't show the rest of the app
         st.stop()
     else:
+        # Video not found, skip intro
         st.session_state.intro_video_watched = True
 
 # -------------------------------------------------------
