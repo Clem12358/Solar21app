@@ -6,39 +6,44 @@
       "type": "select",
       "weight_key": "sub_owner",
       "max_score": 3,
+      "topic": {
+        "en": "Owner type",
+        "fr": "Type de propriétaire",
+        "de": "Eigentümertyp"
+      },
       "labels": {
         "en": "Who owns this site?",
-        "fr": "Qui est propri\u00e9taire de ce site ?",
-        "de": "Wer ist Eigent\u00fcmer dieses Standorts?"
+        "fr": "Qui est propriétaire de ce site ?",
+        "de": "Wer ist Eigentümer dieses Standorts?"
       },
       "help": {
         "en": "This helps us understand how easy it is for the owner to finance a solar project.",
-        "fr": "Cela nous aide \u00e0 comprendre la facilit\u00e9 de financement d'un projet solaire pour le propri\u00e9taire.",
-        "de": "Dies hilft uns zu verstehen, wie einfach es f\u00fcr den Eigent\u00fcmer ist, ein Solarprojekt zu finanzieren."
+        "fr": "Cela nous aide à comprendre la facilité de financement d'un projet solaire pour le propriétaire.",
+        "de": "Dies hilft uns zu verstehen, wie einfach es für den Eigentümer ist, ein Solarprojekt zu finanzieren."
       },
       "options": [
         {
           "score": 3,
           "labels": {
-            "en": "Public entity or large institutional owner \u2014 Hospitals, municipalities, cantonal buildings, universities, major corporates. Typically low cost of capital and stable approval processes.",
-            "fr": "Entit\u00e9 publique ou grand propri\u00e9taire institutionnel \u2014 H\u00f4pitaux, municipalit\u00e9s, b\u00e2timents cantonaux, universit\u00e9s, grandes entreprises. G\u00e9n\u00e9ralement faible co\u00fbt du capital et processus d'approbation stables.",
-            "de": "\u00d6ffentliche Einrichtung oder gro\u00dfer institutioneller Eigent\u00fcmer \u2014 Krankenh\u00e4user, Gemeinden, Kantonsgeb\u00e4ude, Universit\u00e4ten, gro\u00dfe Unternehmen. Typischerweise niedrige Kapitalkosten und stabile Genehmigungsverfahren."
+            "en": "Public entity or large institutional owner — Hospitals, municipalities, cantonal buildings, universities, major corporates. Typically low cost of capital and stable approval processes.",
+            "fr": "Entité publique ou grand propriétaire institutionnel — Hôpitaux, municipalités, bâtiments cantonaux, universités, grandes entreprises. Généralement faible coût du capital et processus d'approbation stables.",
+            "de": "Öffentliche Einrichtung oder großer institutioneller Eigentümer — Krankenhäuser, Gemeinden, Kantonsgebäude, Universitäten, große Unternehmen. Typischerweise niedrige Kapitalkosten und stabile Genehmigungsverfahren."
           }
         },
         {
           "score": 2,
           "labels": {
-            "en": "Standard commercial owner \u2014 Regular private companies, logistics firms, retail centers, property companies.",
-            "fr": "Propri\u00e9taire commercial standard \u2014 Entreprises priv\u00e9es r\u00e9guli\u00e8res, entreprises de logistique, centres commerciaux, soci\u00e9t\u00e9s immobili\u00e8res.",
-            "de": "Standard-Gewerbeinhaber \u2014 Regul\u00e4re Privatunternehmen, Logistikunternehmen, Einkaufszentren, Immobiliengesellschaften."
+            "en": "Standard commercial owner — Regular private companies, logistics firms, retail centers, property companies.",
+            "fr": "Propriétaire commercial standard — Entreprises privées régulières, entreprises de logistique, centres commerciaux, sociétés immobilières.",
+            "de": "Standard-Gewerbeinhaber — Reguläre Privatunternehmen, Logistikunternehmen, Einkaufszentren, Immobiliengesellschaften."
           }
         },
         {
           "score": 1,
           "labels": {
-            "en": "Private individual or small SME \u2014 Smaller budgets, higher financing constraints, usually slower decision cycles.",
-            "fr": "Particulier ou petite PME \u2014 Budgets plus petits, contraintes de financement plus \u00e9lev\u00e9es, cycles de d\u00e9cision g\u00e9n\u00e9ralement plus lents.",
-            "de": "Privatperson oder kleines KMU \u2014 Kleinere Budgets, h\u00f6here Finanzierungsbeschr\u00e4nkungen, in der Regel langsamere Entscheidungszyklen."
+            "en": "Private individual or small SME — Smaller budgets, higher financing constraints, usually slower decision cycles.",
+            "fr": "Particulier ou petite PME — Budgets plus petits, contraintes de financement plus élevées, cycles de décision généralement plus lents.",
+            "de": "Privatperson oder kleines KMU — Kleinere Budgets, höhere Finanzierungsbeschränkungen, in der Regel langsamere Entscheidungszyklen."
           }
         }
       ]
@@ -49,39 +54,44 @@
       "type": "select",
       "weight_key": "sub_esg",
       "max_score": 3,
+      "topic": {
+        "en": "ESG engagement",
+        "fr": "Engagement ESG",
+        "de": "ESG-Engagement"
+      },
       "labels": {
         "en": "Is the owner visibly engaged in sustainability topics?",
-        "fr": "Le propri\u00e9taire est-il visiblement engag\u00e9 dans la durabilit\u00e9 ?",
-        "de": "Ist der Eigent\u00fcmer sichtbar im Nachhaltigkeitsbereich engagiert?"
+        "fr": "Le propriétaire est-il visiblement engagé dans la durabilité ?",
+        "de": "Ist der Eigentümer sichtbar im Nachhaltigkeitsbereich engagiert?"
       },
       "help": {
         "en": "This helps estimate how receptive they are to solar solutions.",
-        "fr": "Cela aide \u00e0 estimer leur r\u00e9ceptivit\u00e9 aux solutions solaires.",
-        "de": "Dies hilft einzusch\u00e4tzen, wie aufgeschlossen sie f\u00fcr Solarl\u00f6sungen sind."
+        "fr": "Cela aide à estimer leur réceptivité aux solutions solaires.",
+        "de": "Dies hilft einzuschätzen, wie aufgeschlossen sie für Solarlösungen sind."
       },
       "options": [
         {
           "score": 3,
           "labels": {
-            "en": "Yes \u2014 sustainability is clearly part of their identity (Website, annual reports, labels, certifications, public commitments)",
-            "fr": "Oui \u2014 la durabilit\u00e9 fait clairement partie de leur identit\u00e9 (Site web, rapports annuels, labels, certifications, engagements publics)",
-            "de": "Ja \u2014 Nachhaltigkeit ist eindeutig Teil ihrer Identit\u00e4t (Website, Jahresberichte, Labels, Zertifizierungen, \u00f6ffentliche Verpflichtungen)"
+            "en": "Yes — sustainability is clearly part of their identity (Website, annual reports, labels, certifications, public commitments)",
+            "fr": "Oui — la durabilité fait clairement partie de leur identité (Site web, rapports annuels, labels, certifications, engagements publics)",
+            "de": "Ja — Nachhaltigkeit ist eindeutig Teil ihrer Identität (Website, Jahresberichte, Labels, Zertifizierungen, öffentliche Verpflichtungen)"
           }
         },
         {
           "score": 2,
           "labels": {
-            "en": "Not sure \u2014 no clear signal (No obvious information available)",
-            "fr": "Incertain \u2014 aucun signal clair (Aucune information \u00e9vidente disponible)",
-            "de": "Unsicher \u2014 kein klares Signal (Keine offensichtlichen Informationen verf\u00fcgbar)"
+            "en": "Not sure — no clear signal (No obvious information available)",
+            "fr": "Incertain — aucun signal clair (Aucune information évidente disponible)",
+            "de": "Unsicher — kein klares Signal (Keine offensichtlichen Informationen verfügbar)"
           }
         },
         {
           "score": 1,
           "labels": {
-            "en": "No \u2014 sustainability is not a visible priority (No ESG communication, purely cost-driven decision-making)",
-            "fr": "Non \u2014 la durabilit\u00e9 n'est pas une priorit\u00e9 visible (Aucune communication ESG, d\u00e9cisions purement bas\u00e9es sur les co\u00fbts)",
-            "de": "Nein \u2014 Nachhaltigkeit ist keine sichtbare Priorit\u00e4t (Keine ESG-Kommunikation, rein kostenorientierte Entscheidungsfindung)"
+            "en": "No — sustainability is not a visible priority (No ESG communication, purely cost-driven decision-making)",
+            "fr": "Non — la durabilité n'est pas une priorité visible (Aucune communication ESG, décisions purement basées sur les coûts)",
+            "de": "Nein — Nachhaltigkeit ist keine sichtbare Priorität (Keine ESG-Kommunikation, rein kostenorientierte Entscheidungsfindung)"
           }
         }
       ]
@@ -97,15 +107,20 @@
       "default_value": 60,
       "step": 1,
       "unit": "%",
+      "topic": {
+        "en": "Daytime consumption",
+        "fr": "Consommation diurne",
+        "de": "Tagesverbrauch"
+      },
       "labels": {
-        "en": "What share of the site's electricity is used during daytime (08:00\u201318:00)?",
-        "fr": "Quelle part de l'\u00e9lectricit\u00e9 du site est utilis\u00e9e en journ\u00e9e (08h00\u201318h00) ?",
-        "de": "Welcher Anteil des Stroms wird tags\u00fcber (08:00\u201318:00) verbraucht?"
+        "en": "What share of the site's electricity is used during daytime (08:00–18:00)?",
+        "fr": "Quelle part de l'électricité du site est utilisée en journée (08h00–18h00) ?",
+        "de": "Welcher Anteil des Stroms wird tagsüber (08:00–18:00) verbraucht?"
       },
       "help": {
-        "en": "Daytime consumption increases the amount of solar electricity the site can use directly, improving economic attractiveness. Choose your best estimate \u2014 it doesn't need to be perfect.",
-        "fr": "La consommation diurne augmente la part d'\u00e9lectricit\u00e9 solaire utilis\u00e9e directement, am\u00e9liorant l'attractivit\u00e9 \u00e9conomique. Choisissez votre meilleure estimation \u2014 elle n'a pas besoin d'\u00eatre parfaite.",
-        "de": "Tagesverbrauch erh\u00f6ht den Anteil an direkt genutztem Solarstrom und verbessert die Wirtschaftlichkeit. W\u00e4hlen Sie Ihre beste Sch\u00e4tzung \u2014 sie muss nicht perfekt sein."
+        "en": "Daytime consumption increases the amount of solar electricity the site can use directly, improving economic attractiveness. Choose your best estimate — it doesn't need to be perfect.",
+        "fr": "La consommation diurne augmente la part d'électricité solaire utilisée directement, améliorant l'attractivité économique. Choisissez votre meilleure estimation — elle n'a pas besoin d'être parfaite.",
+        "de": "Tagesverbrauch erhöht den Anteil an direkt genutztem Solarstrom und verbessert die Wirtschaftlichkeit. Wählen Sie Ihre beste Schätzung — sie muss nicht perfekt sein."
       },
       "scoring_thresholds": [
         {"min": 75, "score": 3},
@@ -120,14 +135,19 @@
       "type": "select",
       "weight_key": "sub_spend",
       "max_score": 4,
+      "topic": {
+        "en": "Electricity spend",
+        "fr": "Dépenses d'électricité",
+        "de": "Stromkosten"
+      },
       "labels": {
         "en": "What is the site's annual electricity cost (CHF)?",
-        "fr": "Quel est le co\u00fbt annuel d'\u00e9lectricit\u00e9 du site (CHF) ?",
-        "de": "Was sind die j\u00e4hrlichen Stromkosten des Standorts (CHF)?"
+        "fr": "Quel est le coût annuel d'électricité du site (CHF) ?",
+        "de": "Was sind die jährlichen Stromkosten des Standorts (CHF)?"
       },
       "help": {
         "en": "This indicates the financial importance of energy decisions and the potential for savings.",
-        "fr": "Cela indique l'importance financi\u00e8re des d\u00e9cisions \u00e9nerg\u00e9tiques et le potentiel d'\u00e9conomies.",
+        "fr": "Cela indique l'importance financière des décisions énergétiques et le potentiel d'économies.",
         "de": "Dies zeigt die finanzielle Bedeutung von Energieentscheidungen und das Einsparpotenzial."
       },
       "display_horizontal": true,
@@ -143,17 +163,17 @@
         {
           "score": 2,
           "labels": {
-            "en": "100k \u2014 300k CHF",
-            "fr": "100k \u2014 300k CHF",
-            "de": "100k \u2014 300k CHF"
+            "en": "100k — 300k CHF",
+            "fr": "100k — 300k CHF",
+            "de": "100k — 300k CHF"
           }
         },
         {
           "score": 3,
           "labels": {
-            "en": "300k \u2014 800k CHF",
-            "fr": "300k \u2014 800k CHF",
-            "de": "300k \u2014 800k CHF"
+            "en": "300k — 800k CHF",
+            "fr": "300k — 800k CHF",
+            "de": "300k — 800k CHF"
           }
         },
         {
@@ -161,7 +181,7 @@
           "labels": {
             "en": "Above 800k CHF",
             "fr": "Plus de 800k CHF",
-            "de": "\u00dcber 800k CHF"
+            "de": "Über 800k CHF"
           }
         }
       ]
@@ -172,39 +192,44 @@
       "type": "select",
       "weight_key": "sub_season",
       "max_score": 3,
+      "topic": {
+        "en": "Seasonal stability",
+        "fr": "Stabilité saisonnière",
+        "de": "Saisonale Stabilität"
+      },
       "labels": {
         "en": "How stable is the site's electricity consumption throughout the year?",
-        "fr": "Quelle est la stabilit\u00e9 de la consommation \u00e9lectrique tout au long de l'ann\u00e9e ?",
-        "de": "Wie stabil ist der Stromverbrauch des Standorts \u00fcber das Jahr?"
+        "fr": "Quelle est la stabilité de la consommation électrique tout au long de l'année ?",
+        "de": "Wie stabil ist der Stromverbrauch des Standorts über das Jahr?"
       },
       "help": {
         "en": "High seasonality makes it harder to match solar production with consumption.",
-        "fr": "Une forte saisonnalit\u00e9 rend plus difficile l'ad\u00e9quation entre production solaire et consommation.",
-        "de": "Hohe Saisonalit\u00e4t erschwert die Anpassung von Solarproduktion und Verbrauch."
+        "fr": "Une forte saisonnalité rend plus difficile l'adéquation entre production solaire et consommation.",
+        "de": "Hohe Saisonalität erschwert die Anpassung von Solarproduktion und Verbrauch."
       },
       "options": [
         {
           "score": 3,
           "labels": {
-            "en": "Low seasonal variation (\u00b110%) \u2014 Consumption stays stable across the year",
-            "fr": "Faible variation saisonni\u00e8re (\u00b110%) \u2014 La consommation reste stable tout au long de l'ann\u00e9e",
-            "de": "Geringe saisonale Schwankung (\u00b110%) \u2014 Verbrauch bleibt \u00fcber das Jahr stabil"
+            "en": "Low seasonal variation (±10%) — Consumption stays stable across the year",
+            "fr": "Faible variation saisonnière (±10%) — La consommation reste stable tout au long de l'année",
+            "de": "Geringe saisonale Schwankung (±10%) — Verbrauch bleibt über das Jahr stabil"
           }
         },
         {
           "score": 2,
           "labels": {
-            "en": "Moderate variation (\u00b110\u201325%) \u2014 Some seasonal differences (e.g., cooling or heating loads)",
-            "fr": "Variation mod\u00e9r\u00e9e (\u00b110\u201325%) \u2014 Quelques diff\u00e9rences saisonni\u00e8res (par ex. charges de refroidissement ou de chauffage)",
-            "de": "M\u00e4\u00dfige Schwankung (\u00b110\u201325%) \u2014 Einige saisonale Unterschiede (z.B. K\u00fchl- oder Heizlasten)"
+            "en": "Moderate variation (±10–25%) — Some seasonal differences (e.g., cooling or heating loads)",
+            "fr": "Variation modérée (±10–25%) — Quelques différences saisonnières (par ex. charges de refroidissement ou de chauffage)",
+            "de": "Mäßige Schwankung (±10–25%) — Einige saisonale Unterschiede (z.B. Kühl- oder Heizlasten)"
           }
         },
         {
           "score": 1,
           "labels": {
-            "en": "High variation (>25%) \u2014 Strong seasonality, big differences between summer and winter",
-            "fr": "Forte variation (>25%) \u2014 Forte saisonnalit\u00e9, grandes diff\u00e9rences entre \u00e9t\u00e9 et hiver",
-            "de": "Hohe Schwankung (>25%) \u2014 Starke Saisonalit\u00e4t, gro\u00dfe Unterschiede zwischen Sommer und Winter"
+            "en": "High variation (>25%) — Strong seasonality, big differences between summer and winter",
+            "fr": "Forte variation (>25%) — Forte saisonnalité, grandes différences entre été et hiver",
+            "de": "Hohe Schwankung (>25%) — Starke Saisonalität, große Unterschiede zwischen Sommer und Winter"
           }
         }
       ]
@@ -216,31 +241,36 @@
       "weight_key": "sub_loads",
       "max_score": 3,
       "display_horizontal": true,
+      "topic": {
+        "en": "24/7 loads",
+        "fr": "Charges 24/7",
+        "de": "24/7-Lasten"
+      },
       "labels": {
         "en": "Does the site operate equipment that runs 24/7?",
-        "fr": "Le site exploite-t-il des \u00e9quipements fonctionnant 24h/24 7j/7 ?",
-        "de": "Betreibt der Standort Ger\u00e4te, die 24/7 laufen?"
+        "fr": "Le site exploite-t-il des équipements fonctionnant 24h/24 7j/7 ?",
+        "de": "Betreibt der Standort Geräte, die 24/7 laufen?"
       },
       "help": {
         "en": "Constant loads (cold rooms, servers, manufacturing lines) increase the share of solar energy that can be consumed directly.",
-        "fr": "Les charges constantes (chambres froides, serveurs, lignes de production) augmentent la part d'\u00e9nergie solaire consomm\u00e9e directement.",
-        "de": "Konstante Lasten (K\u00fchlr\u00e4ume, Serverr\u00e4ume, Produktionslinien) erh\u00f6hen den Anteil direkt verbrauchter Solarenergie."
+        "fr": "Les charges constantes (chambres froides, serveurs, lignes de production) augmentent la part d'énergie solaire consommée directement.",
+        "de": "Konstante Lasten (Kühlräume, Serverräume, Produktionslinien) erhöhen den Anteil direkt verbrauchter Solarenergie."
       },
       "options": [
         {
           "score": 3,
           "labels": {
-            "en": "Yes \u2014 important 24/7 loads (Cold storage, server rooms, industrial baseload, data centers)",
-            "fr": "Oui \u2014 charges importantes 24h/24 7j/7 (Stockage frigorifique, salles de serveurs, charge de base industrielle, centres de donn\u00e9es)",
-            "de": "Ja \u2014 wichtige 24/7-Lasten (K\u00fchlr\u00e4ume, Serverr\u00e4ume, industrielle Grundlast, Rechenzentren)"
+            "en": "Yes — important 24/7 loads (Cold storage, server rooms, industrial baseload, data centers)",
+            "fr": "Oui — charges importantes 24h/24 7j/7 (Stockage frigorifique, salles de serveurs, charge de base industrielle, centres de données)",
+            "de": "Ja — wichtige 24/7-Lasten (Kühlräume, Serverräume, industrielle Grundlast, Rechenzentren)"
           }
         },
         {
           "score": 1,
           "labels": {
-            "en": "No \u2014 mainly daytime or irregular loads",
-            "fr": "Non \u2014 principalement charges diurnes ou irr\u00e9guli\u00e8res",
-            "de": "Nein \u2014 haupts\u00e4chlich Tages- oder unregelm\u00e4\u00dfige Lasten"
+            "en": "No — mainly daytime or irregular loads",
+            "fr": "Non — principalement charges diurnes ou irrégulières",
+            "de": "Nein — hauptsächlich Tages- oder unregelmäßige Lasten"
           }
         }
       ]

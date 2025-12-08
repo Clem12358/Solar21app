@@ -429,6 +429,7 @@ DEFAULT_QUESTIONS = [
         "type": "select",
         "weight_key": "sub_owner",
         "max_score": 3,
+        "topic": {"en": "Owner type", "fr": "Type de propriétaire", "de": "Eigentümertyp"},
         "labels": {"en": "Who owns this site?", "fr": "Qui est propriétaire de ce site ?", "de": "Wer ist Eigentümer dieses Standorts?"},
         "help": {"en": "This helps us understand how easy it is for the owner to finance a solar project.", "fr": "Cela nous aide à comprendre la facilité de financement d'un projet solaire pour le propriétaire.", "de": "Dies hilft uns zu verstehen, wie einfach es für den Eigentümer ist, ein Solarprojekt zu finanzieren."},
         "options": [
@@ -443,6 +444,7 @@ DEFAULT_QUESTIONS = [
         "type": "select",
         "weight_key": "sub_esg",
         "max_score": 3,
+        "topic": {"en": "ESG engagement", "fr": "Engagement ESG", "de": "ESG-Engagement"},
         "labels": {"en": "Is the owner visibly engaged in sustainability topics?", "fr": "Le propriétaire est-il visiblement engagé dans la durabilité ?", "de": "Ist der Eigentümer sichtbar im Nachhaltigkeitsbereich engagiert?"},
         "help": {"en": "This helps estimate how receptive they are to solar solutions.", "fr": "Cela aide à estimer leur réceptivité aux solutions solaires.", "de": "Dies hilft einzuschätzen, wie aufgeschlossen sie für Solarlösungen sind."},
         "options": [
@@ -462,6 +464,7 @@ DEFAULT_QUESTIONS = [
         "default_value": 60,
         "step": 1,
         "unit": "%",
+        "topic": {"en": "Daytime consumption", "fr": "Consommation diurne", "de": "Tagesverbrauch"},
         "labels": {"en": "What share of the site's electricity is used during daytime (08:00–18:00)?", "fr": "Quelle part de l'électricité du site est utilisée en journée (08h00–18h00) ?", "de": "Welcher Anteil des Stroms wird tagsüber (08:00–18:00) verbraucht?"},
         "help": {"en": "Daytime consumption increases the amount of solar electricity the site can use directly.", "fr": "La consommation diurne augmente la part d'électricité solaire utilisée directement.", "de": "Tagesverbrauch erhöht den Anteil an direkt genutztem Solarstrom."},
         "scoring_thresholds": [{"min": 75, "score": 3}, {"min": 50, "score": 2}, {"min": 25, "score": 1}, {"min": 0, "score": 0}]
@@ -473,6 +476,7 @@ DEFAULT_QUESTIONS = [
         "weight_key": "sub_spend",
         "max_score": 4,
         "display_horizontal": True,
+        "topic": {"en": "Electricity spend", "fr": "Dépenses d'électricité", "de": "Stromkosten"},
         "labels": {"en": "What is the site's annual electricity cost (CHF)?", "fr": "Quel est le coût annuel d'électricité du site (CHF) ?", "de": "Was sind die jährlichen Stromkosten des Standorts (CHF)?"},
         "help": {"en": "This indicates the financial importance of energy decisions and the potential for savings.", "fr": "Cela indique l'importance financière des décisions énergétiques et le potentiel d'économies.", "de": "Dies zeigt die finanzielle Bedeutung von Energieentscheidungen und das Einsparpotenzial."},
         "options": [
@@ -488,6 +492,7 @@ DEFAULT_QUESTIONS = [
         "type": "select",
         "weight_key": "sub_season",
         "max_score": 3,
+        "topic": {"en": "Seasonal stability", "fr": "Stabilité saisonnière", "de": "Saisonale Stabilität"},
         "labels": {"en": "How stable is the site's electricity consumption throughout the year?", "fr": "Quelle est la stabilité de la consommation électrique tout au long de l'année ?", "de": "Wie stabil ist der Stromverbrauch des Standorts über das Jahr?"},
         "help": {"en": "High seasonality makes it harder to match solar production with consumption.", "fr": "Une forte saisonnalité rend plus difficile l'adéquation entre production solaire et consommation.", "de": "Hohe Saisonalität erschwert die Anpassung von Solarproduktion und Verbrauch."},
         "options": [
@@ -503,6 +508,7 @@ DEFAULT_QUESTIONS = [
         "weight_key": "sub_loads",
         "max_score": 3,
         "display_horizontal": True,
+        "topic": {"en": "24/7 loads", "fr": "Charges 24/7", "de": "24/7-Lasten"},
         "labels": {"en": "Does the site operate equipment that runs 24/7?", "fr": "Le site exploite-t-il des équipements fonctionnant 24h/24 7j/7 ?", "de": "Betreibt der Standort Geräte, die 24/7 laufen?"},
         "help": {"en": "Constant loads increase the share of solar energy that can be consumed directly.", "fr": "Les charges constantes augmentent la part d'énergie solaire consommée directement.", "de": "Konstante Lasten erhöhen den Anteil direkt verbrauchter Solarenergie."},
         "options": [
@@ -1229,6 +1235,72 @@ TEXT = {
         "fr": "Afficher les options horizontalement",
         "de": "Optionen horizontal anzeigen"
     },
+    # New panel structure texts
+    "fixed_inputs_panel": {
+        "en": "Fixed Inputs",
+        "fr": "Entrées fixes",
+        "de": "Feste Eingaben"
+    },
+    "fixed_inputs_desc": {
+        "en": "These inputs are measured values that cannot be removed. You can adjust their weight in the score calculation.",
+        "fr": "Ces entrées sont des valeurs mesurées qui ne peuvent pas être supprimées. Vous pouvez ajuster leur poids dans le calcul du score.",
+        "de": "Diese Eingaben sind gemessene Werte, die nicht entfernt werden können. Sie können ihr Gewicht in der Punkteberechnung anpassen."
+    },
+    "structure_questions_panel": {
+        "en": "Structure Questions Weights",
+        "fr": "Poids des questions de structure",
+        "de": "Gewichte der Strukturfragen"
+    },
+    "structure_questions_desc": {
+        "en": "Adjust the relative importance of structure-related questions. Weights will be normalized to sum to 100%.",
+        "fr": "Ajustez l'importance relative des questions liées à la structure. Les poids seront normalisés pour totaliser 100%.",
+        "de": "Passen Sie die relative Bedeutung der strukturbezogenen Fragen an. Die Gewichte werden auf 100% normiert."
+    },
+    "consumption_questions_panel": {
+        "en": "Consumption Questions Weights",
+        "fr": "Poids des questions de consommation",
+        "de": "Gewichte der Verbrauchsfragen"
+    },
+    "consumption_questions_desc": {
+        "en": "Adjust the relative importance of consumption-related questions. Weights will be normalized to sum to 100%.",
+        "fr": "Ajustez l'importance relative des questions liées à la consommation. Les poids seront normalisés pour totaliser 100%.",
+        "de": "Passen Sie die relative Bedeutung der verbrauchsbezogenen Fragen an. Die Gewichte werden auf 100% normiert."
+    },
+    "roof_size_topic": {
+        "en": "Roof size",
+        "fr": "Taille du toit",
+        "de": "Dachgröße"
+    },
+    "question_topic": {
+        "en": "Question topic (short label)",
+        "fr": "Sujet de la question (étiquette courte)",
+        "de": "Fragenthema (Kurzbezeichnung)"
+    },
+    "question_topic_en": {
+        "en": "Topic (English)",
+        "fr": "Sujet (Anglais)",
+        "de": "Thema (Englisch)"
+    },
+    "question_topic_fr": {
+        "en": "Topic (French)",
+        "fr": "Sujet (Français)",
+        "de": "Thema (Französisch)"
+    },
+    "question_topic_de": {
+        "en": "Topic (German)",
+        "fr": "Sujet (Allemand)",
+        "de": "Thema (Deutsch)"
+    },
+    "no_questions_in_category": {
+        "en": "No questions in this category yet.",
+        "fr": "Pas encore de questions dans cette catégorie.",
+        "de": "Noch keine Fragen in dieser Kategorie."
+    },
+    "weights_saved_auto": {
+        "en": "Weights updated.",
+        "fr": "Poids mis à jour.",
+        "de": "Gewichte aktualisiert."
+    },
 }
 
 # All question options, defined once to avoid recreating per render
@@ -1625,88 +1697,94 @@ def page_role_selection():
 
         st.markdown("---")
 
+        # Get questions for dynamic weight panels
+        questions = st.session_state.get("questions", _load_questions_from_disk())
+        structure_questions = [q for q in questions if q.get("category") == "structure"]
+        consumption_questions = [q for q in questions if q.get("category") == "consumption"]
+
+        # Dictionary to store all weight slider values
+        weight_values = {}
+
         # ─────────────────────────────────────────────────────────
-        # STRUCTURE SUB-WEIGHTS (expandable)
+        # PANEL 1: FIXED INPUTS (Roof Size)
         # ─────────────────────────────────────────────────────────
-        with st.expander(f"⚙️ {TEXT['structure_subweights_section'][L]}", expanded=False):
-            st.markdown("""
+        with st.expander(f"⚙️ {TEXT['fixed_inputs_panel'][L]}", expanded=False):
+            st.markdown(f"""
             <div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;'>
-            <small>These weights determine the relative importance of factors within the Structure category. They will be normalized to sum to 100%.</small>
+            <small>{TEXT['fixed_inputs_desc'][L]}</small>
             </div>
             """, unsafe_allow_html=True)
 
-            scol1, scol2, scol3 = st.columns(3)
-            with scol1:
-                sub_roof_default = int(round(st.session_state["weights"].get("sub_roof", DEFAULT_WEIGHTS["sub_roof"]) * 100))
-                sub_roof_pct = st.slider(
-                    TEXT["sub_roof_weight"][L],
-                    0, 100, sub_roof_default,
-                    step=5, format="%d%%", key="sub_roof"
-                )
-            with scol2:
-                sub_owner_default = int(round(st.session_state["weights"].get("sub_owner", DEFAULT_WEIGHTS["sub_owner"]) * 100))
-                sub_owner_pct = st.slider(
-                    TEXT["sub_owner_weight"][L],
-                    0, 100, sub_owner_default,
-                    step=5, format="%d%%", key="sub_owner"
-                )
-            with scol3:
-                sub_esg_default = int(round(st.session_state["weights"].get("sub_esg", DEFAULT_WEIGHTS["sub_esg"]) * 100))
-                sub_esg_pct = st.slider(
-                    TEXT["sub_esg_weight"][L],
-                    0, 100, sub_esg_default,
-                    step=5, format="%d%%", key="sub_esg"
-                )
-
-            struct_sub_total = sub_roof_pct + sub_owner_pct + sub_esg_pct
-            if struct_sub_total > 0:
-                st.caption(f"Total: {struct_sub_total}% → normalized to 100%")
-            else:
-                st.warning("At least one sub-weight must be > 0")
+            sub_roof_default = int(round(st.session_state["weights"].get("sub_roof", DEFAULT_WEIGHTS["sub_roof"]) * 100))
+            weight_values["sub_roof"] = st.slider(
+                TEXT["roof_size_topic"][L],
+                0, 100, sub_roof_default,
+                step=5, format="%d%%", key="sub_roof"
+            )
 
         # ─────────────────────────────────────────────────────────
-        # CONSUMPTION SUB-WEIGHTS (expandable)
+        # PANEL 2: STRUCTURE QUESTIONS WEIGHTS
         # ─────────────────────────────────────────────────────────
-        with st.expander(f"⚙️ {TEXT['consumption_subweights_section'][L]}", expanded=False):
-            st.markdown("""
+        with st.expander(f"⚙️ {TEXT['structure_questions_panel'][L]}", expanded=False):
+            st.markdown(f"""
             <div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;'>
-            <small>These weights determine the relative importance of factors within the Consumption category. They will be normalized to sum to 100%.</small>
+            <small>{TEXT['structure_questions_desc'][L]}</small>
             </div>
             """, unsafe_allow_html=True)
 
-            ccol1, ccol2 = st.columns(2)
-            with ccol1:
-                sub_spend_default = int(round(st.session_state["weights"].get("sub_spend", DEFAULT_WEIGHTS["sub_spend"]) * 100))
-                sub_spend_pct = st.slider(
-                    TEXT["sub_spend_weight"][L],
-                    0, 100, sub_spend_default,
-                    step=5, format="%d%%", key="sub_spend"
-                )
-                sub_daytime_default = int(round(st.session_state["weights"].get("sub_daytime", DEFAULT_WEIGHTS["sub_daytime"]) * 100))
-                sub_daytime_pct = st.slider(
-                    TEXT["sub_daytime_weight"][L],
-                    0, 100, sub_daytime_default,
-                    step=5, format="%d%%", key="sub_daytime"
-                )
-            with ccol2:
-                sub_season_default = int(round(st.session_state["weights"].get("sub_season", DEFAULT_WEIGHTS["sub_season"]) * 100))
-                sub_season_pct = st.slider(
-                    TEXT["sub_season_weight"][L],
-                    0, 100, sub_season_default,
-                    step=5, format="%d%%", key="sub_season"
-                )
-                sub_loads_default = int(round(st.session_state["weights"].get("sub_loads", DEFAULT_WEIGHTS["sub_loads"]) * 100))
-                sub_loads_pct = st.slider(
-                    TEXT["sub_loads_weight"][L],
-                    0, 100, sub_loads_default,
-                    step=5, format="%d%%", key="sub_loads"
-                )
+            if structure_questions:
+                num_cols = min(len(structure_questions), 3)
+                cols = st.columns(num_cols)
+                for i, q in enumerate(structure_questions):
+                    with cols[i % num_cols]:
+                        weight_key = q.get("weight_key", f"sub_{q['id']}")
+                        topic_label = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q["id"]))
+                        default_val = int(round(st.session_state["weights"].get(weight_key, 0.2) * 100))
+                        weight_values[weight_key] = st.slider(
+                            topic_label,
+                            0, 100, default_val,
+                            step=5, format="%d%%", key=f"weight_{weight_key}"
+                        )
 
-            cons_sub_total = sub_spend_pct + sub_daytime_pct + sub_season_pct + sub_loads_pct
-            if cons_sub_total > 0:
-                st.caption(f"Total: {cons_sub_total}% → normalized to 100%")
+                struct_q_total = sum(weight_values.get(q.get("weight_key", f"sub_{q['id']}"), 0) for q in structure_questions)
+                if struct_q_total > 0:
+                    st.caption(f"Total: {struct_q_total}% → normalized to 100%")
+                else:
+                    st.warning("At least one sub-weight must be > 0")
             else:
-                st.warning("At least one sub-weight must be > 0")
+                st.info(TEXT["no_questions_in_category"][L])
+
+        # ─────────────────────────────────────────────────────────
+        # PANEL 3: CONSUMPTION QUESTIONS WEIGHTS
+        # ─────────────────────────────────────────────────────────
+        with st.expander(f"⚙️ {TEXT['consumption_questions_panel'][L]}", expanded=False):
+            st.markdown(f"""
+            <div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;'>
+            <small>{TEXT['consumption_questions_desc'][L]}</small>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if consumption_questions:
+                num_cols = min(len(consumption_questions), 2)
+                cols = st.columns(num_cols)
+                for i, q in enumerate(consumption_questions):
+                    with cols[i % num_cols]:
+                        weight_key = q.get("weight_key", f"sub_{q['id']}")
+                        topic_label = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q["id"]))
+                        default_val = int(round(st.session_state["weights"].get(weight_key, 0.2) * 100))
+                        weight_values[weight_key] = st.slider(
+                            topic_label,
+                            0, 100, default_val,
+                            step=5, format="%d%%", key=f"weight_{weight_key}"
+                        )
+
+                cons_q_total = sum(weight_values.get(q.get("weight_key", f"sub_{q['id']}"), 0) for q in consumption_questions)
+                if cons_q_total > 0:
+                    st.caption(f"Total: {cons_q_total}% → normalized to 100%")
+                else:
+                    st.warning("At least one sub-weight must be > 0")
+            else:
+                st.info(TEXT["no_questions_in_category"][L])
 
         st.markdown("---")
 
@@ -1716,26 +1794,38 @@ def page_role_selection():
         col_save, col_proceed = st.columns(2)
         with col_save:
             if st.button(TEXT["save_weights"][L], type="primary", use_container_width=True):
-                # Normalize structure sub-weights
-                struct_total = sub_roof_pct + sub_owner_pct + sub_esg_pct
+                # Calculate totals for normalization
+                # Fixed inputs (roof) + structure questions
+                struct_total = weight_values.get("sub_roof", 0) + sum(
+                    weight_values.get(q.get("weight_key", f"sub_{q['id']}"), 0) for q in structure_questions
+                )
                 if struct_total == 0:
-                    struct_total = 1  # Avoid division by zero
-                # Normalize consumption sub-weights
-                cons_total = sub_spend_pct + sub_daytime_pct + sub_season_pct + sub_loads_pct
+                    struct_total = 1
+
+                # Consumption questions
+                cons_total = sum(
+                    weight_values.get(q.get("weight_key", f"sub_{q['id']}"), 0) for q in consumption_questions
+                )
                 if cons_total == 0:
                     cons_total = 1
 
+                # Build new weights dict
                 new_weights = {
                     "structure": structure_pct / 100,
                     "consumption": consumption_pct / 100,
-                    "sub_roof": sub_roof_pct / struct_total,
-                    "sub_owner": sub_owner_pct / struct_total,
-                    "sub_esg": sub_esg_pct / struct_total,
-                    "sub_spend": sub_spend_pct / cons_total,
-                    "sub_daytime": sub_daytime_pct / cons_total,
-                    "sub_season": sub_season_pct / cons_total,
-                    "sub_loads": sub_loads_pct / cons_total,
+                    "sub_roof": weight_values.get("sub_roof", 40) / struct_total,
                 }
+
+                # Add structure question weights
+                for q in structure_questions:
+                    weight_key = q.get("weight_key", f"sub_{q['id']}")
+                    new_weights[weight_key] = weight_values.get(weight_key, 0) / struct_total
+
+                # Add consumption question weights
+                for q in consumption_questions:
+                    weight_key = q.get("weight_key", f"sub_{q['id']}")
+                    new_weights[weight_key] = weight_values.get(weight_key, 0) / cons_total
+
                 st.session_state["weights"] = new_weights
                 _persist_weights(new_weights)
                 st.success(f"✅ {TEXT['weights_saved'][L]}")
@@ -1818,6 +1908,24 @@ def page_role_selection():
                     disabled=bool(editing_question)  # Can't change ID when editing
                 )
 
+                # Question topic (short label for panels and results)
+                st.markdown(f"**{TEXT['question_topic'][L]}**")
+                topic_en = st.text_input(
+                    TEXT["question_topic_en"][L],
+                    value=editing_question.get("topic", {}).get("en", "") if editing_question else "",
+                    key="new_q_topic_en"
+                )
+                topic_fr = st.text_input(
+                    TEXT["question_topic_fr"][L],
+                    value=editing_question.get("topic", {}).get("fr", "") if editing_question else "",
+                    key="new_q_topic_fr"
+                )
+                topic_de = st.text_input(
+                    TEXT["question_topic_de"][L],
+                    value=editing_question.get("topic", {}).get("de", "") if editing_question else "",
+                    key="new_q_topic_de"
+                )
+
                 # Question text (multilingual)
                 st.markdown(f"**{TEXT['question_text_en'][L]}**")
                 q_text_en = st.text_area(
@@ -1886,17 +1994,6 @@ def page_role_selection():
                     max_value=10,
                     value=default_max,
                     key="new_q_max_score"
-                )
-
-                # Initial weight
-                default_weight = 20
-                if editing_question and editing_question.get("weight_key"):
-                    current_weights = st.session_state.get("weights", {})
-                    default_weight = int(current_weights.get(editing_question["weight_key"], 0.2) * 100)
-                q_initial_weight = st.slider(
-                    TEXT["initial_weight"][L],
-                    0, 100, default_weight,
-                    step=5, format="%d%%", key="new_q_weight"
                 )
 
                 # Display horizontal option (for select type)
@@ -2061,6 +2158,11 @@ def page_role_selection():
                                 "type": type_value,
                                 "weight_key": weight_key if not editing_question else editing_question.get("weight_key", weight_key),
                                 "max_score": q_max_score,
+                                "topic": {
+                                    "en": topic_en.strip() if topic_en else q_id.strip(),
+                                    "fr": topic_fr.strip() if topic_fr else (topic_en.strip() if topic_en else q_id.strip()),
+                                    "de": topic_de.strip() if topic_de else (topic_en.strip() if topic_en else q_id.strip())
+                                },
                                 "labels": {
                                     "en": q_text_en.strip(),
                                     "fr": q_text_fr.strip() if q_text_fr else q_text_en.strip(),
@@ -2109,15 +2211,14 @@ def page_role_selection():
                             st.session_state["questions"] = questions
                             _persist_questions(questions)
 
-                            # Update weights with new question's weight
-                            weights = st.session_state.get("weights", _load_weights_from_disk())
-                            weight_key_to_use = new_question["weight_key"]
-                            if weight_key_to_use not in weights:
-                                weights[weight_key_to_use] = q_initial_weight / 100
-                            else:
-                                weights[weight_key_to_use] = q_initial_weight / 100
-                            st.session_state["weights"] = weights
-                            _persist_weights(weights)
+                            # Add default weight for new questions (if not editing)
+                            if not editing_question:
+                                weights = st.session_state.get("weights", _load_weights_from_disk())
+                                weight_key_to_use = new_question["weight_key"]
+                                if weight_key_to_use not in weights:
+                                    weights[weight_key_to_use] = 0.2  # Default 20%
+                                    st.session_state["weights"] = weights
+                                    _persist_weights(weights)
 
                             # Reset state
                             st.session_state["show_add_question"] = False
@@ -2640,14 +2741,28 @@ def page_results():
 
         # ── DETAILED FACTOR ANALYSIS ──
         with st.expander(f"📊 {TEXT['factor_analysis'][L]}", expanded=True):
+            # Get questions for dynamic labels
+            all_questions = st.session_state.get("questions", _load_questions_from_disk())
+            structure_qs = [q for q in all_questions if q.get("category") == "structure"]
+            consumption_qs = [q for q in all_questions if q.get("category") == "consumption"]
+
             # Structure factors
             st.markdown(f"**🏗️ {TEXT['structure_score_label'][L]}**")
 
+            # Roof is always first (fixed input)
             factors_structure = [
-                (TEXT["roof_score_label"][L], details["roof"], f"{site.get('roof_area', 'N/A')} m²"),
-                (TEXT["owner_type_label"][L], details["owner"], ans['owner_type'].split('—')[0].strip()),
-                (TEXT["esg_label"][L], details["esg"], ans['esg'].split('—')[0].strip()),
+                (TEXT["roof_size_topic"][L], details["roof"], f"{site.get('roof_area', 'N/A')} m²"),
             ]
+
+            # Add structure questions dynamically
+            for q in structure_qs:
+                q_id = q["id"]
+                if q_id in details:
+                    topic_label = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q_id))
+                    ans_value = ans.get(q_id, "")
+                    if isinstance(ans_value, str) and '—' in ans_value:
+                        ans_value = ans_value.split('—')[0].strip()
+                    factors_structure.append((topic_label, details[q_id], ans_value))
 
             for name, data, value in factors_structure:
                 bar_color = "progress-green" if data["normalized"] >= 66 else "progress-yellow" if data["normalized"] >= 33 else "progress-red"
@@ -2667,12 +2782,18 @@ def page_results():
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"**⚡ {TEXT['consumption_score_label'][L]}**")
 
-            factors_consumption = [
-                (TEXT["spend_label"][L], details["spend"], ans['spend']),
-                (TEXT["daytime_label"][L], details["daytime"], f"{ans['daytime']}%"),
-                (TEXT["season_label"][L], details["season"], ans['season'].split('—')[0].strip()),
-                (TEXT["loads_label"][L], details["loads"], ans['loads'].split('—')[0].strip()),
-            ]
+            # Add consumption questions dynamically
+            factors_consumption = []
+            for q in consumption_qs:
+                q_id = q["id"]
+                if q_id in details:
+                    topic_label = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q_id))
+                    ans_value = ans.get(q_id, "")
+                    if q.get("type") == "slider":
+                        ans_value = f"{ans_value}%"
+                    elif isinstance(ans_value, str) and '—' in ans_value:
+                        ans_value = ans_value.split('—')[0].strip()
+                    factors_consumption.append((topic_label, details[q_id], ans_value))
 
             for name, data, value in factors_consumption:
                 bar_color = "progress-green" if data["normalized"] >= 66 else "progress-yellow" if data["normalized"] >= 33 else "progress-red"
@@ -2691,15 +2812,24 @@ def page_results():
 
         # ── STRENGTHS & AREAS TO WATCH ──
         with st.expander(f"💡 {TEXT['strengths'][L]} & {TEXT['areas_to_watch'][L]}", expanded=False):
+            # Build all_factors dynamically
             all_factors = [
-                (TEXT["roof_score_label"][L], details["roof"]["normalized"]),
-                (TEXT["owner_type_label"][L], details["owner"]["normalized"]),
-                (TEXT["esg_label"][L], details["esg"]["normalized"]),
-                (TEXT["spend_label"][L], details["spend"]["normalized"]),
-                (TEXT["daytime_label"][L], details["daytime"]["normalized"]),
-                (TEXT["season_label"][L], details["season"]["normalized"]),
-                (TEXT["loads_label"][L], details["loads"]["normalized"]),
+                (TEXT["roof_size_topic"][L], details["roof"]["normalized"]),
             ]
+
+            # Add structure questions
+            for q in structure_qs:
+                q_id = q["id"]
+                if q_id in details:
+                    topic_label = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q_id))
+                    all_factors.append((topic_label, details[q_id]["normalized"]))
+
+            # Add consumption questions
+            for q in consumption_qs:
+                q_id = q["id"]
+                if q_id in details:
+                    topic_label = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q_id))
+                    all_factors.append((topic_label, details[q_id]["normalized"]))
 
             strengths = [f for f in all_factors if f[1] >= 66]
             weaknesses = [f for f in all_factors if f[1] < 50]
