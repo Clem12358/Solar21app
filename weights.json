@@ -1,4 +1,11 @@
 {
   "structure": 0.4,
-  "consumption": 0.6
+  "consumption": 0.6,
+  "sub_roof": 0.4,
+  "sub_owner": 0.3,
+  "sub_esg": 0.3,
+  "sub_spend": 0.3,
+  "sub_daytime": 0.25,
+  "sub_season": 0.25,
+  "sub_loads": 0.2
 }

@@ -416,6 +416,152 @@ def _load_weights_from_disk():
 def _persist_weights(weights):
     WEIGHTS_FILE.write_text(json.dumps(weights, indent=2), encoding="utf-8")
 
+
+# -------------------------------------------------------
+# QUESTIONS FILE MANAGEMENT
+# -------------------------------------------------------
+QUESTIONS_FILE = Path("questions.json")
+
+DEFAULT_QUESTIONS = [
+    {
+        "id": "owner",
+        "category": "structure",
+        "type": "select",
+        "weight_key": "sub_owner",
+        "max_score": 3,
+        "labels": {"en": "Who owns this site?", "fr": "Qui est propriétaire de ce site ?", "de": "Wer ist Eigentümer dieses Standorts?"},
+        "help": {"en": "This helps us understand how easy it is for the owner to finance a solar project.", "fr": "Cela nous aide à comprendre la facilité de financement d'un projet solaire pour le propriétaire.", "de": "Dies hilft uns zu verstehen, wie einfach es für den Eigentümer ist, ein Solarprojekt zu finanzieren."},
+        "options": [
+            {"score": 3, "labels": {"en": "Public entity or large institutional owner", "fr": "Entité publique ou grand propriétaire institutionnel", "de": "Öffentliche Einrichtung oder großer institutioneller Eigentümer"}},
+            {"score": 2, "labels": {"en": "Standard commercial owner", "fr": "Propriétaire commercial standard", "de": "Standard-Gewerbeinhaber"}},
+            {"score": 1, "labels": {"en": "Private individual or small SME", "fr": "Particulier ou petite PME", "de": "Privatperson oder kleines KMU"}}
+        ]
+    },
+    {
+        "id": "esg",
+        "category": "structure",
+        "type": "select",
+        "weight_key": "sub_esg",
+        "max_score": 3,
+        "labels": {"en": "Is the owner visibly engaged in sustainability topics?", "fr": "Le propriétaire est-il visiblement engagé dans la durabilité ?", "de": "Ist der Eigentümer sichtbar im Nachhaltigkeitsbereich engagiert?"},
+        "help": {"en": "This helps estimate how receptive they are to solar solutions.", "fr": "Cela aide à estimer leur réceptivité aux solutions solaires.", "de": "Dies hilft einzuschätzen, wie aufgeschlossen sie für Solarlösungen sind."},
+        "options": [
+            {"score": 3, "labels": {"en": "Yes — sustainability is clearly part of their identity", "fr": "Oui — la durabilité fait clairement partie de leur identité", "de": "Ja — Nachhaltigkeit ist eindeutig Teil ihrer Identität"}},
+            {"score": 2, "labels": {"en": "Not sure — no clear signal", "fr": "Incertain — aucun signal clair", "de": "Unsicher — kein klares Signal"}},
+            {"score": 1, "labels": {"en": "No — sustainability is not a visible priority", "fr": "Non — la durabilité n'est pas une priorité visible", "de": "Nein — Nachhaltigkeit ist keine sichtbare Priorität"}}
+        ]
+    },
+    {
+        "id": "daytime",
+        "category": "consumption",
+        "type": "slider",
+        "weight_key": "sub_daytime",
+        "max_score": 3,
+        "min_value": 0,
+        "max_value": 100,
+        "default_value": 60,
+        "step": 1,
+        "unit": "%",
+        "labels": {"en": "What share of the site's electricity is used during daytime (08:00–18:00)?", "fr": "Quelle part de l'électricité du site est utilisée en journée (08h00–18h00) ?", "de": "Welcher Anteil des Stroms wird tagsüber (08:00–18:00) verbraucht?"},
+        "help": {"en": "Daytime consumption increases the amount of solar electricity the site can use directly.", "fr": "La consommation diurne augmente la part d'électricité solaire utilisée directement.", "de": "Tagesverbrauch erhöht den Anteil an direkt genutztem Solarstrom."},
+        "scoring_thresholds": [{"min": 75, "score": 3}, {"min": 50, "score": 2}, {"min": 25, "score": 1}, {"min": 0, "score": 0}]
+    },
+    {
+        "id": "spend",
+        "category": "consumption",
+        "type": "select",
+        "weight_key": "sub_spend",
+        "max_score": 4,
+        "display_horizontal": True,
+        "labels": {"en": "What is the site's annual electricity cost (CHF)?", "fr": "Quel est le coût annuel d'électricité du site (CHF) ?", "de": "Was sind die jährlichen Stromkosten des Standorts (CHF)?"},
+        "help": {"en": "This indicates the financial importance of energy decisions and the potential for savings.", "fr": "Cela indique l'importance financière des décisions énergétiques et le potentiel d'économies.", "de": "Dies zeigt die finanzielle Bedeutung von Energieentscheidungen und das Einsparpotenzial."},
+        "options": [
+            {"score": 1, "labels": {"en": "Below 100k CHF", "fr": "Moins de 100k CHF", "de": "Unter 100k CHF"}},
+            {"score": 2, "labels": {"en": "100k — 300k CHF", "fr": "100k — 300k CHF", "de": "100k — 300k CHF"}},
+            {"score": 3, "labels": {"en": "300k — 800k CHF", "fr": "300k — 800k CHF", "de": "300k — 800k CHF"}},
+            {"score": 4, "labels": {"en": "Above 800k CHF", "fr": "Plus de 800k CHF", "de": "Über 800k CHF"}}
+        ]
+    },
+    {
+        "id": "season",
+        "category": "consumption",
+        "type": "select",
+        "weight_key": "sub_season",
+        "max_score": 3,
+        "labels": {"en": "How stable is the site's electricity consumption throughout the year?", "fr": "Quelle est la stabilité de la consommation électrique tout au long de l'année ?", "de": "Wie stabil ist der Stromverbrauch des Standorts über das Jahr?"},
+        "help": {"en": "High seasonality makes it harder to match solar production with consumption.", "fr": "Une forte saisonnalité rend plus difficile l'adéquation entre production solaire et consommation.", "de": "Hohe Saisonalität erschwert die Anpassung von Solarproduktion und Verbrauch."},
+        "options": [
+            {"score": 3, "labels": {"en": "Low seasonal variation (±10%)", "fr": "Faible variation saisonnière (±10%)", "de": "Geringe saisonale Schwankung (±10%)"}},
+            {"score": 2, "labels": {"en": "Moderate variation (±10–25%)", "fr": "Variation modérée (±10–25%)", "de": "Mäßige Schwankung (±10–25%)"}},
+            {"score": 1, "labels": {"en": "High variation (>25%)", "fr": "Forte variation (>25%)", "de": "Hohe Schwankung (>25%)"}}
+        ]
+    },
+    {
+        "id": "loads",
+        "category": "consumption",
+        "type": "select",
+        "weight_key": "sub_loads",
+        "max_score": 3,
+        "display_horizontal": True,
+        "labels": {"en": "Does the site operate equipment that runs 24/7?", "fr": "Le site exploite-t-il des équipements fonctionnant 24h/24 7j/7 ?", "de": "Betreibt der Standort Geräte, die 24/7 laufen?"},
+        "help": {"en": "Constant loads increase the share of solar energy that can be consumed directly.", "fr": "Les charges constantes augmentent la part d'énergie solaire consommée directement.", "de": "Konstante Lasten erhöhen den Anteil direkt verbrauchter Solarenergie."},
+        "options": [
+            {"score": 3, "labels": {"en": "Yes — important 24/7 loads", "fr": "Oui — charges importantes 24h/24 7j/7", "de": "Ja — wichtige 24/7-Lasten"}},
+            {"score": 1, "labels": {"en": "No — mainly daytime or irregular loads", "fr": "Non — principalement charges diurnes ou irrégulières", "de": "Nein — hauptsächlich Tages- oder unregelmäßige Lasten"}}
+        ]
+    }
+]
+
+
+def _load_questions_from_disk():
+    """Load questions from questions.json file"""
+    if QUESTIONS_FILE.exists():
+        try:
+            with QUESTIONS_FILE.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            return data.get("questions", DEFAULT_QUESTIONS)
+        except Exception:
+            pass
+    return DEFAULT_QUESTIONS.copy()
+
+
+def _persist_questions(questions):
+    """Save questions to questions.json file"""
+    QUESTIONS_FILE.write_text(json.dumps({"questions": questions}, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _get_question_by_id(questions, question_id):
+    """Get a question by its ID"""
+    for q in questions:
+        if q["id"] == question_id:
+            return q
+    return None
+
+
+def _compute_question_score(question, answer_value):
+    """Compute the score for a question based on the answer"""
+    if question["type"] == "slider":
+        # For slider questions, use scoring_thresholds
+        thresholds = question.get("scoring_thresholds", [])
+        for threshold in thresholds:
+            if answer_value >= threshold["min"]:
+                return threshold["score"]
+        return 0
+    else:
+        # For select questions, find the option and return its score
+        for option in question.get("options", []):
+            if option["labels"].get("en", "") == answer_value or \
+               option["labels"].get("fr", "") == answer_value or \
+               option["labels"].get("de", "") == answer_value:
+                return option["score"]
+        # If exact match not found, try partial match (for backward compatibility)
+        for option in question.get("options", []):
+            for lang in ["en", "fr", "de"]:
+                if option["labels"].get(lang, "") in answer_value or answer_value in option["labels"].get(lang, ""):
+                    return option["score"]
+        return 1  # Default minimum score
+
+
 def init_state():
     defaults = {
         "page": "lang",
@@ -424,6 +570,7 @@ def init_state():
         "current_index": 0,
         "answers": {},
         "weights": _load_weights_from_disk(),
+        "questions": _load_questions_from_disk(),
         "employee_authenticated": False,
     }
     for k, v in defaults.items():
@@ -851,6 +998,237 @@ TEXT = {
         "fr": "Moyenne de tous les sites",
         "de": "Durchschnitt aller Standorte"
     },
+    # Question management UI texts
+    "question_management_title": {
+        "en": "Question Management",
+        "fr": "Gestion des questions",
+        "de": "Fragenverwaltung"
+    },
+    "question_management_desc": {
+        "en": "Add, edit, or remove evaluation questions. Changes apply to all users.",
+        "fr": "Ajouter, modifier ou supprimer des questions d'évaluation. Les modifications s'appliquent à tous les utilisateurs.",
+        "de": "Bewertungsfragen hinzufügen, bearbeiten oder entfernen. Änderungen gelten für alle Benutzer."
+    },
+    "current_questions": {
+        "en": "Current Questions",
+        "fr": "Questions actuelles",
+        "de": "Aktuelle Fragen"
+    },
+    "add_new_question": {
+        "en": "Add New Question",
+        "fr": "Ajouter une nouvelle question",
+        "de": "Neue Frage hinzufügen"
+    },
+    "question_id": {
+        "en": "Question ID (unique, lowercase, no spaces)",
+        "fr": "ID de la question (unique, minuscules, sans espaces)",
+        "de": "Frage-ID (eindeutig, Kleinbuchstaben, keine Leerzeichen)"
+    },
+    "question_text_en": {
+        "en": "Question text (English)",
+        "fr": "Texte de la question (Anglais)",
+        "de": "Fragetext (Englisch)"
+    },
+    "question_text_fr": {
+        "en": "Question text (French)",
+        "fr": "Texte de la question (Français)",
+        "de": "Fragetext (Französisch)"
+    },
+    "question_text_de": {
+        "en": "Question text (German)",
+        "fr": "Texte de la question (Allemand)",
+        "de": "Fragetext (Deutsch)"
+    },
+    "help_text_en": {
+        "en": "Help text (English)",
+        "fr": "Texte d'aide (Anglais)",
+        "de": "Hilfetext (Englisch)"
+    },
+    "help_text_fr": {
+        "en": "Help text (French)",
+        "fr": "Texte d'aide (Français)",
+        "de": "Hilfetext (Französisch)"
+    },
+    "help_text_de": {
+        "en": "Help text (German)",
+        "fr": "Texte d'aide (Allemand)",
+        "de": "Hilfetext (Deutsch)"
+    },
+    "question_category": {
+        "en": "Category",
+        "fr": "Catégorie",
+        "de": "Kategorie"
+    },
+    "category_structure": {
+        "en": "Structure (roof, ownership, ESG)",
+        "fr": "Structure (toit, propriétaire, ESG)",
+        "de": "Struktur (Dach, Eigentümer, ESG)"
+    },
+    "category_consumption": {
+        "en": "Consumption (spend, load profile)",
+        "fr": "Consommation (dépenses, profil de charge)",
+        "de": "Verbrauch (Kosten, Lastprofil)"
+    },
+    "question_type": {
+        "en": "Answer type",
+        "fr": "Type de réponse",
+        "de": "Antworttyp"
+    },
+    "type_select": {
+        "en": "Multiple choice",
+        "fr": "Choix multiple",
+        "de": "Multiple Choice"
+    },
+    "type_slider": {
+        "en": "Percentage slider",
+        "fr": "Curseur de pourcentage",
+        "de": "Prozentschieberegler"
+    },
+    "max_score": {
+        "en": "Maximum score",
+        "fr": "Score maximum",
+        "de": "Maximale Punktzahl"
+    },
+    "initial_weight": {
+        "en": "Initial weight (%)",
+        "fr": "Pondération initiale (%)",
+        "de": "Anfangsgewichtung (%)"
+    },
+    "options_section": {
+        "en": "Answer Options",
+        "fr": "Options de réponse",
+        "de": "Antwortoptionen"
+    },
+    "option_text_en": {
+        "en": "Option text (English)",
+        "fr": "Texte de l'option (Anglais)",
+        "de": "Optionstext (Englisch)"
+    },
+    "option_text_fr": {
+        "en": "Option text (French)",
+        "fr": "Texte de l'option (Français)",
+        "de": "Optionstext (Französisch)"
+    },
+    "option_text_de": {
+        "en": "Option text (German)",
+        "fr": "Texte de l'option (Allemand)",
+        "de": "Optionstext (Deutsch)"
+    },
+    "option_score": {
+        "en": "Score for this option",
+        "fr": "Score pour cette option",
+        "de": "Punktzahl für diese Option"
+    },
+    "add_option": {
+        "en": "+ Add option",
+        "fr": "+ Ajouter une option",
+        "de": "+ Option hinzufügen"
+    },
+    "remove_option": {
+        "en": "Remove",
+        "fr": "Supprimer",
+        "de": "Entfernen"
+    },
+    "save_question": {
+        "en": "Save Question",
+        "fr": "Enregistrer la question",
+        "de": "Frage speichern"
+    },
+    "question_saved": {
+        "en": "Question saved successfully!",
+        "fr": "Question enregistrée avec succès !",
+        "de": "Frage erfolgreich gespeichert!"
+    },
+    "delete_question": {
+        "en": "Delete",
+        "fr": "Supprimer",
+        "de": "Löschen"
+    },
+    "edit_question": {
+        "en": "Edit",
+        "fr": "Modifier",
+        "de": "Bearbeiten"
+    },
+    "question_deleted": {
+        "en": "Question deleted.",
+        "fr": "Question supprimée.",
+        "de": "Frage gelöscht."
+    },
+    "confirm_delete": {
+        "en": "Are you sure you want to delete this question?",
+        "fr": "Êtes-vous sûr de vouloir supprimer cette question ?",
+        "de": "Sind Sie sicher, dass Sie diese Frage löschen möchten?"
+    },
+    "cancel": {
+        "en": "Cancel",
+        "fr": "Annuler",
+        "de": "Abbrechen"
+    },
+    "slider_settings": {
+        "en": "Slider Settings",
+        "fr": "Paramètres du curseur",
+        "de": "Schieberegler-Einstellungen"
+    },
+    "min_value": {
+        "en": "Minimum value",
+        "fr": "Valeur minimale",
+        "de": "Minimalwert"
+    },
+    "max_value_slider": {
+        "en": "Maximum value",
+        "fr": "Valeur maximale",
+        "de": "Maximalwert"
+    },
+    "default_value": {
+        "en": "Default value",
+        "fr": "Valeur par défaut",
+        "de": "Standardwert"
+    },
+    "scoring_thresholds": {
+        "en": "Scoring Thresholds",
+        "fr": "Seuils de notation",
+        "de": "Bewertungsschwellen"
+    },
+    "threshold_min": {
+        "en": "If value >=",
+        "fr": "Si valeur >=",
+        "de": "Wenn Wert >="
+    },
+    "threshold_score": {
+        "en": "Score",
+        "fr": "Score",
+        "de": "Punktzahl"
+    },
+    "add_threshold": {
+        "en": "+ Add threshold",
+        "fr": "+ Ajouter un seuil",
+        "de": "+ Schwelle hinzufügen"
+    },
+    "question_id_exists": {
+        "en": "A question with this ID already exists.",
+        "fr": "Une question avec cet ID existe déjà.",
+        "de": "Eine Frage mit dieser ID existiert bereits."
+    },
+    "question_id_required": {
+        "en": "Question ID is required.",
+        "fr": "L'ID de la question est requis.",
+        "de": "Frage-ID ist erforderlich."
+    },
+    "question_text_required": {
+        "en": "Question text (English) is required.",
+        "fr": "Le texte de la question (Anglais) est requis.",
+        "de": "Fragetext (Englisch) ist erforderlich."
+    },
+    "at_least_one_option": {
+        "en": "At least one option is required.",
+        "fr": "Au moins une option est requise.",
+        "de": "Mindestens eine Option ist erforderlich."
+    },
+    "display_horizontal": {
+        "en": "Display options horizontally",
+        "fr": "Afficher les options horizontalement",
+        "de": "Optionen horizontal anzeigen"
+    },
 }
 
 # All question options, defined once to avoid recreating per render
@@ -956,65 +1334,10 @@ def compute_roof_score(area):
         return 1
 
 def compute_final_score(answers, roof_score):
-    """Compute the final Solar21 site attractiveness score using weighted sub-scores"""
+    """Compute the final Solar21 site attractiveness score using dynamic questions and weights"""
 
-    # Extract owner type score (max 3)
-    owner_str = answers["owner_type"]
-    if "Public entity" in owner_str or "Entité publique" in owner_str or "Öffentliche Einrichtung" in owner_str:
-        owner_type_score = 3
-    elif "Standard commercial" in owner_str or "commercial standard" in owner_str or "Standard-Gewerbe" in owner_str:
-        owner_type_score = 2
-    else:
-        owner_type_score = 1
-
-    # Extract ESG score (max 3)
-    esg_str = answers["esg"]
-    if esg_str.startswith("Yes") or esg_str.startswith("Oui") or esg_str.startswith("Ja"):
-        esg_score = 3
-    elif esg_str.startswith("Not sure") or esg_str.startswith("Incertain") or esg_str.startswith("Unsicher"):
-        esg_score = 2
-    else:
-        esg_score = 1
-
-    # Extract spend score (max 4)
-    spend_str = answers["spend"]
-    if "Above 800k" in spend_str or "Plus de 800k" in spend_str or "Über 800k" in spend_str:
-        spend_score = 4
-    elif "300k" in spend_str and "800k" in spend_str:
-        spend_score = 3
-    elif "100k" in spend_str and "300k" in spend_str:
-        spend_score = 2
-    else:
-        spend_score = 1
-
-    # Daytime score (max 3)
-    daytime_pct = answers["daytime"]
-    if daytime_pct >= 75:
-        daytime_score = 3
-    elif daytime_pct >= 50:
-        daytime_score = 2
-    elif daytime_pct >= 25:
-        daytime_score = 1
-    else:
-        daytime_score = 0
-
-    # Seasonality score (max 3, inverted - low variation is better)
-    season_str = answers["season"]
-    if "Low" in season_str or "Faible" in season_str or "Geringe" in season_str:
-        season_score = 3
-    elif "Moderate" in season_str or "modérée" in season_str or "Mäßige" in season_str:
-        season_score = 2
-    else:
-        season_score = 1
-
-    # 24/7 loads score (max 3)
-    loads_str = answers["loads"]
-    if loads_str.startswith("Yes") or loads_str.startswith("Oui") or loads_str.startswith("Ja"):
-        loads_score = 3
-    else:
-        loads_score = 1
-
-    # Get weights from session state
+    # Get questions and weights from session state
+    questions = st.session_state.get("questions", _load_questions_from_disk())
     weights = st.session_state.get("weights", DEFAULT_WEIGHTS)
 
     # Main category weights
@@ -1027,35 +1350,53 @@ def compute_final_score(answers, roof_score):
         structure_weight /= total_weight
         consumption_weight /= total_weight
     else:
-        structure_weight = DEFAULT_WEIGHTS["structure"]
-        consumption_weight = DEFAULT_WEIGHTS["consumption"]
+        structure_weight = 0.5
+        consumption_weight = 0.5
 
-    # Structure sub-weights
-    sub_roof = weights.get("sub_roof", DEFAULT_WEIGHTS["sub_roof"])
-    sub_owner = weights.get("sub_owner", DEFAULT_WEIGHTS["sub_owner"])
-    sub_esg = weights.get("sub_esg", DEFAULT_WEIGHTS["sub_esg"])
+    # Compute scores for each category
+    structure_scores = []
+    consumption_scores = []
 
-    # Consumption sub-weights
-    sub_spend = weights.get("sub_spend", DEFAULT_WEIGHTS["sub_spend"])
-    sub_daytime = weights.get("sub_daytime", DEFAULT_WEIGHTS["sub_daytime"])
-    sub_season = weights.get("sub_season", DEFAULT_WEIGHTS["sub_season"])
-    sub_loads = weights.get("sub_loads", DEFAULT_WEIGHTS["sub_loads"])
-
-    # Normalize each sub-score to 0-1 range, then apply sub-weights
-    # Structure: roof (0-3), owner (1-3), esg (1-3)
+    # Always include roof in structure (it's not a question but a measurement)
+    sub_roof = weights.get("sub_roof", DEFAULT_WEIGHTS.get("sub_roof", 0.4))
     roof_norm = roof_score / 3 if roof_score > 0 else 0
-    owner_norm = owner_type_score / 3
-    esg_norm = esg_score / 3
+    structure_scores.append((roof_norm, sub_roof))
 
-    A_norm = sub_roof * roof_norm + sub_owner * owner_norm + sub_esg * esg_norm
+    # Process each question
+    for question in questions:
+        q_id = question["id"]
+        weight_key = question.get("weight_key", f"sub_{q_id}")
+        max_score = question.get("max_score", 3)
+        category = question.get("category", "consumption")
 
-    # Consumption: spend (1-4), daytime (0-3), season (1-3), loads (1-3)
-    spend_norm = spend_score / 4
-    daytime_norm = daytime_score / 3
-    season_norm = season_score / 3
-    loads_norm = loads_score / 3
+        # Get the answer
+        answer_value = answers.get(q_id)
+        if answer_value is None:
+            continue
 
-    B_norm = sub_spend * spend_norm + sub_daytime * daytime_norm + sub_season * season_norm + sub_loads * loads_norm
+        # Compute score based on question type
+        score = _compute_question_score(question, answer_value)
+        normalized = score / max_score if max_score > 0 else 0
+
+        # Get the weight for this question
+        sub_weight = weights.get(weight_key, 0.2)
+
+        if category == "structure":
+            structure_scores.append((normalized, sub_weight))
+        else:
+            consumption_scores.append((normalized, sub_weight))
+
+    # Normalize sub-weights within each category and compute weighted sum
+    def compute_category_score(scores):
+        if not scores:
+            return 0
+        total_sub_weight = sum(w for _, w in scores)
+        if total_sub_weight == 0:
+            return 0
+        return sum(score * (weight / total_sub_weight) for score, weight in scores)
+
+    A_norm = compute_category_score(structure_scores)
+    B_norm = compute_category_score(consumption_scores)
 
     # Final weighted score
     final_score = structure_weight * A_norm + consumption_weight * B_norm
@@ -1067,104 +1408,78 @@ def compute_final_score(answers, roof_score):
 
 
 def compute_detailed_scores(answers, roof_score):
-    """Compute detailed breakdown of all scores for results display"""
+    """Compute detailed breakdown of all scores for results display using dynamic questions"""
 
-    # Extract owner type score (max 3)
-    owner_str = answers["owner_type"]
-    if "Public entity" in owner_str or "Entité publique" in owner_str or "Öffentliche Einrichtung" in owner_str:
-        owner_type_score = 3
-    elif "Standard commercial" in owner_str or "commercial standard" in owner_str or "Standard-Gewerbe" in owner_str:
-        owner_type_score = 2
-    else:
-        owner_type_score = 1
-
-    # Extract ESG score (max 3)
-    esg_str = answers["esg"]
-    if esg_str.startswith("Yes") or esg_str.startswith("Oui") or esg_str.startswith("Ja"):
-        esg_score = 3
-    elif esg_str.startswith("Not sure") or esg_str.startswith("Incertain") or esg_str.startswith("Unsicher"):
-        esg_score = 2
-    else:
-        esg_score = 1
-
-    # Extract spend score (max 4)
-    spend_str = answers["spend"]
-    if "Above 800k" in spend_str or "Plus de 800k" in spend_str or "Über 800k" in spend_str:
-        spend_score = 4
-    elif "300k" in spend_str and "800k" in spend_str:
-        spend_score = 3
-    elif "100k" in spend_str and "300k" in spend_str:
-        spend_score = 2
-    else:
-        spend_score = 1
-
-    # Daytime score (max 3)
-    daytime_pct = answers["daytime"]
-    if daytime_pct >= 75:
-        daytime_score = 3
-    elif daytime_pct >= 50:
-        daytime_score = 2
-    elif daytime_pct >= 25:
-        daytime_score = 1
-    else:
-        daytime_score = 0
-
-    # Seasonality score (max 3)
-    season_str = answers["season"]
-    if "Low" in season_str or "Faible" in season_str or "Geringe" in season_str:
-        season_score = 3
-    elif "Moderate" in season_str or "modérée" in season_str or "Mäßige" in season_str:
-        season_score = 2
-    else:
-        season_score = 1
-
-    # 24/7 loads score (max 3)
-    loads_str = answers["loads"]
-    if loads_str.startswith("Yes") or loads_str.startswith("Oui") or loads_str.startswith("Ja"):
-        loads_score = 3
-    else:
-        loads_score = 1
-
-    # Get weights
+    # Get questions and weights from session state
+    questions = st.session_state.get("questions", _load_questions_from_disk())
     weights = st.session_state.get("weights", DEFAULT_WEIGHTS)
+
     structure_weight = weights.get("structure", DEFAULT_WEIGHTS["structure"])
     consumption_weight = weights.get("consumption", DEFAULT_WEIGHTS["consumption"])
 
-    # Sub-weights
-    sub_roof = weights.get("sub_roof", DEFAULT_WEIGHTS["sub_roof"])
-    sub_owner = weights.get("sub_owner", DEFAULT_WEIGHTS["sub_owner"])
-    sub_esg = weights.get("sub_esg", DEFAULT_WEIGHTS["sub_esg"])
-    sub_spend = weights.get("sub_spend", DEFAULT_WEIGHTS["sub_spend"])
-    sub_daytime = weights.get("sub_daytime", DEFAULT_WEIGHTS["sub_daytime"])
-    sub_season = weights.get("sub_season", DEFAULT_WEIGHTS["sub_season"])
-    sub_loads = weights.get("sub_loads", DEFAULT_WEIGHTS["sub_loads"])
+    # Build detailed scores dict
+    detailed = {}
+    structure_scores = []
+    consumption_scores = []
 
-    # Normalized scores (0-1)
+    # Roof is always included
+    sub_roof = weights.get("sub_roof", DEFAULT_WEIGHTS.get("sub_roof", 0.4))
     roof_norm = roof_score / 3 if roof_score > 0 else 0
-    owner_norm = owner_type_score / 3
-    esg_norm = esg_score / 3
-    spend_norm = spend_score / 4
-    daytime_norm = daytime_score / 3
-    season_norm = season_score / 3
-    loads_norm = loads_score / 3
-
-    # Category scores (0-100)
-    A_norm = sub_roof * roof_norm + sub_owner * owner_norm + sub_esg * esg_norm
-    B_norm = sub_spend * spend_norm + sub_daytime * daytime_norm + sub_season * season_norm + sub_loads * loads_norm
-
-    return {
-        "roof": {"score": roof_score, "max": 3, "normalized": roof_norm * 100, "weight": sub_roof},
-        "owner": {"score": owner_type_score, "max": 3, "normalized": owner_norm * 100, "weight": sub_owner},
-        "esg": {"score": esg_score, "max": 3, "normalized": esg_norm * 100, "weight": sub_esg},
-        "spend": {"score": spend_score, "max": 4, "normalized": spend_norm * 100, "weight": sub_spend},
-        "daytime": {"score": daytime_score, "max": 3, "normalized": daytime_norm * 100, "weight": sub_daytime},
-        "season": {"score": season_score, "max": 3, "normalized": season_norm * 100, "weight": sub_season},
-        "loads": {"score": loads_score, "max": 3, "normalized": loads_norm * 100, "weight": sub_loads},
-        "structure_total": A_norm * 100,
-        "consumption_total": B_norm * 100,
-        "structure_weight": structure_weight,
-        "consumption_weight": consumption_weight,
+    detailed["roof"] = {
+        "score": roof_score,
+        "max": 3,
+        "normalized": roof_norm * 100,
+        "weight": sub_roof
     }
+    structure_scores.append((roof_norm, sub_roof))
+
+    # Process each question
+    for question in questions:
+        q_id = question["id"]
+        weight_key = question.get("weight_key", f"sub_{q_id}")
+        max_score = question.get("max_score", 3)
+        category = question.get("category", "consumption")
+
+        # Get the answer
+        answer_value = answers.get(q_id)
+        if answer_value is None:
+            continue
+
+        # Compute score
+        score = _compute_question_score(question, answer_value)
+        normalized = score / max_score if max_score > 0 else 0
+        sub_weight = weights.get(weight_key, 0.2)
+
+        detailed[q_id] = {
+            "score": score,
+            "max": max_score,
+            "normalized": normalized * 100,
+            "weight": sub_weight
+        }
+
+        if category == "structure":
+            structure_scores.append((normalized, sub_weight))
+        else:
+            consumption_scores.append((normalized, sub_weight))
+
+    # Compute category totals
+    def compute_category_score(scores):
+        if not scores:
+            return 0
+        total_sub_weight = sum(w for _, w in scores)
+        if total_sub_weight == 0:
+            return 0
+        return sum(score * (weight / total_sub_weight) for score, weight in scores)
+
+    A_norm = compute_category_score(structure_scores)
+    B_norm = compute_category_score(consumption_scores)
+
+    detailed["structure_total"] = A_norm * 100
+    detailed["consumption_total"] = B_norm * 100
+    detailed["structure_weight"] = structure_weight
+    detailed["consumption_weight"] = consumption_weight
+
+    return detailed
 
 
 def get_score_interpretation(score, lang="en"):
@@ -1285,7 +1600,6 @@ def page_role_selection():
 
     if st.session_state.get("employee_authenticated"):
         st.success(TEXT["weights_subtext"][L])
-        st.info(TEXT["weights_pull_hint"][L])
 
         st.markdown(f"## {TEXT['weights_title'][L]}")
         st.caption(TEXT["fine_tune_hint"][L])
@@ -1430,6 +1744,405 @@ def page_role_selection():
             if st.button(TEXT["proceed"][L], use_container_width=True):
                 goto("address_entry")
                 st.rerun()
+
+        # ─────────────────────────────────────────────────────────
+        # QUESTION MANAGEMENT SECTION
+        # ─────────────────────────────────────────────────────────
+        st.markdown("---")
+        st.markdown(f"## {TEXT['question_management_title'][L]}")
+        st.caption(TEXT["question_management_desc"][L])
+
+        # Initialize question editor state
+        if "editing_question_id" not in st.session_state:
+            st.session_state["editing_question_id"] = None
+        if "show_add_question" not in st.session_state:
+            st.session_state["show_add_question"] = False
+        if "new_question_options" not in st.session_state:
+            st.session_state["new_question_options"] = [{"en": "", "fr": "", "de": "", "score": 1}]
+        if "new_question_thresholds" not in st.session_state:
+            st.session_state["new_question_thresholds"] = [{"min": 75, "score": 3}, {"min": 50, "score": 2}, {"min": 25, "score": 1}, {"min": 0, "score": 0}]
+
+        questions = st.session_state.get("questions", _load_questions_from_disk())
+
+        # ── CURRENT QUESTIONS LIST ──
+        with st.expander(f"📋 {TEXT['current_questions'][L]} ({len(questions)})", expanded=True):
+            for q_idx, question in enumerate(questions):
+                q_col1, q_col2, q_col3 = st.columns([4, 1, 1])
+                with q_col1:
+                    category_label = TEXT["category_structure"][L] if question["category"] == "structure" else TEXT["category_consumption"][L]
+                    st.markdown(f"**{q_idx + 1}. {question['labels'].get(L, question['labels'].get('en', 'Unnamed'))}**")
+                    st.caption(f"{category_label} | Max score: {question.get('max_score', 3)}")
+                with q_col2:
+                    if st.button(TEXT["edit_question"][L], key=f"edit_q_{question['id']}", use_container_width=True):
+                        st.session_state["editing_question_id"] = question["id"]
+                        st.session_state["show_add_question"] = False
+                        st.rerun()
+                with q_col3:
+                    if st.button(TEXT["delete_question"][L], key=f"del_q_{question['id']}", use_container_width=True):
+                        # Remove the question
+                        questions = [q for q in questions if q["id"] != question["id"]]
+                        st.session_state["questions"] = questions
+                        _persist_questions(questions)
+                        # Also remove the weight key from weights if it exists
+                        weights = st.session_state.get("weights", {})
+                        if question.get("weight_key") in weights:
+                            del weights[question["weight_key"]]
+                            st.session_state["weights"] = weights
+                            _persist_weights(weights)
+                        st.success(TEXT["question_deleted"][L])
+                        st.rerun()
+                st.markdown("---")
+
+        # ── ADD NEW QUESTION BUTTON ──
+        if not st.session_state.get("show_add_question") and not st.session_state.get("editing_question_id"):
+            if st.button(f"➕ {TEXT['add_new_question'][L]}", use_container_width=True):
+                st.session_state["show_add_question"] = True
+                st.session_state["editing_question_id"] = None
+                st.session_state["new_question_options"] = [{"en": "", "fr": "", "de": "", "score": 1}]
+                st.session_state["new_question_thresholds"] = [{"min": 75, "score": 3}, {"min": 50, "score": 2}, {"min": 25, "score": 1}, {"min": 0, "score": 0}]
+                st.rerun()
+
+        # ── QUESTION EDITOR (for adding or editing) ──
+        editing_question = None
+        if st.session_state.get("editing_question_id"):
+            editing_question = _get_question_by_id(questions, st.session_state["editing_question_id"])
+
+        if st.session_state.get("show_add_question") or editing_question:
+            with st.expander(f"✏️ {TEXT['add_new_question'][L] if not editing_question else TEXT['edit_question'][L]}", expanded=True):
+                # Question ID
+                default_id = editing_question["id"] if editing_question else ""
+                q_id = st.text_input(
+                    TEXT["question_id"][L],
+                    value=default_id,
+                    key="new_q_id",
+                    disabled=bool(editing_question)  # Can't change ID when editing
+                )
+
+                # Question text (multilingual)
+                st.markdown(f"**{TEXT['question_text_en'][L]}**")
+                q_text_en = st.text_area(
+                    TEXT["question_text_en"][L],
+                    value=editing_question["labels"].get("en", "") if editing_question else "",
+                    key="new_q_text_en",
+                    label_visibility="collapsed"
+                )
+                q_text_fr = st.text_input(
+                    TEXT["question_text_fr"][L],
+                    value=editing_question["labels"].get("fr", "") if editing_question else "",
+                    key="new_q_text_fr"
+                )
+                q_text_de = st.text_input(
+                    TEXT["question_text_de"][L],
+                    value=editing_question["labels"].get("de", "") if editing_question else "",
+                    key="new_q_text_de"
+                )
+
+                # Help text (multilingual)
+                st.markdown(f"**{TEXT['help_text_en'][L]}**")
+                h_text_en = st.text_area(
+                    TEXT["help_text_en"][L],
+                    value=editing_question["help"].get("en", "") if editing_question else "",
+                    key="new_q_help_en",
+                    label_visibility="collapsed"
+                )
+                h_text_fr = st.text_input(
+                    TEXT["help_text_fr"][L],
+                    value=editing_question["help"].get("fr", "") if editing_question else "",
+                    key="new_q_help_fr"
+                )
+                h_text_de = st.text_input(
+                    TEXT["help_text_de"][L],
+                    value=editing_question["help"].get("de", "") if editing_question else "",
+                    key="new_q_help_de"
+                )
+
+                # Category
+                cat_options = [TEXT["category_structure"][L], TEXT["category_consumption"][L]]
+                default_cat_idx = 0 if (not editing_question or editing_question["category"] == "structure") else 1
+                q_category = st.selectbox(
+                    TEXT["question_category"][L],
+                    cat_options,
+                    index=default_cat_idx,
+                    key="new_q_category"
+                )
+                category_value = "structure" if q_category == TEXT["category_structure"][L] else "consumption"
+
+                # Question type
+                type_options = [TEXT["type_select"][L], TEXT["type_slider"][L]]
+                default_type_idx = 0 if (not editing_question or editing_question["type"] == "select") else 1
+                q_type = st.selectbox(
+                    TEXT["question_type"][L],
+                    type_options,
+                    index=default_type_idx,
+                    key="new_q_type"
+                )
+                type_value = "select" if q_type == TEXT["type_select"][L] else "slider"
+
+                # Max score
+                default_max = editing_question.get("max_score", 3) if editing_question else 3
+                q_max_score = st.number_input(
+                    TEXT["max_score"][L],
+                    min_value=1,
+                    max_value=10,
+                    value=default_max,
+                    key="new_q_max_score"
+                )
+
+                # Initial weight
+                default_weight = 20
+                if editing_question and editing_question.get("weight_key"):
+                    current_weights = st.session_state.get("weights", {})
+                    default_weight = int(current_weights.get(editing_question["weight_key"], 0.2) * 100)
+                q_initial_weight = st.slider(
+                    TEXT["initial_weight"][L],
+                    0, 100, default_weight,
+                    step=5, format="%d%%", key="new_q_weight"
+                )
+
+                # Display horizontal option (for select type)
+                display_horizontal = False
+                if type_value == "select":
+                    default_horizontal = editing_question.get("display_horizontal", False) if editing_question else False
+                    display_horizontal = st.checkbox(
+                        TEXT["display_horizontal"][L],
+                        value=default_horizontal,
+                        key="new_q_horizontal"
+                    )
+
+                # Options for select type
+                if type_value == "select":
+                    st.markdown(f"### {TEXT['options_section'][L]}")
+
+                    # Initialize options from editing question if available
+                    if editing_question and "edit_options_initialized" not in st.session_state:
+                        st.session_state["new_question_options"] = [
+                            {
+                                "en": opt["labels"].get("en", ""),
+                                "fr": opt["labels"].get("fr", ""),
+                                "de": opt["labels"].get("de", ""),
+                                "score": opt.get("score", 1)
+                            }
+                            for opt in editing_question.get("options", [])
+                        ]
+                        st.session_state["edit_options_initialized"] = True
+
+                    options_to_render = st.session_state.get("new_question_options", [{"en": "", "fr": "", "de": "", "score": 1}])
+
+                    for opt_idx, opt in enumerate(options_to_render):
+                        st.markdown(f"**Option {opt_idx + 1}**")
+                        opt_col1, opt_col2 = st.columns([3, 1])
+                        with opt_col1:
+                            opt["en"] = st.text_input(
+                                TEXT["option_text_en"][L],
+                                value=opt.get("en", ""),
+                                key=f"opt_{opt_idx}_en"
+                            )
+                            opt["fr"] = st.text_input(
+                                TEXT["option_text_fr"][L],
+                                value=opt.get("fr", ""),
+                                key=f"opt_{opt_idx}_fr"
+                            )
+                            opt["de"] = st.text_input(
+                                TEXT["option_text_de"][L],
+                                value=opt.get("de", ""),
+                                key=f"opt_{opt_idx}_de"
+                            )
+                        with opt_col2:
+                            opt["score"] = st.number_input(
+                                TEXT["option_score"][L],
+                                min_value=0,
+                                max_value=10,
+                                value=opt.get("score", 1),
+                                key=f"opt_{opt_idx}_score"
+                            )
+                            if len(options_to_render) > 1:
+                                if st.button(TEXT["remove_option"][L], key=f"remove_opt_{opt_idx}"):
+                                    options_to_render.pop(opt_idx)
+                                    st.session_state["new_question_options"] = options_to_render
+                                    st.rerun()
+
+                    if st.button(TEXT["add_option"][L], key="add_option_btn"):
+                        options_to_render.append({"en": "", "fr": "", "de": "", "score": 1})
+                        st.session_state["new_question_options"] = options_to_render
+                        st.rerun()
+
+                # Slider settings
+                if type_value == "slider":
+                    st.markdown(f"### {TEXT['slider_settings'][L]}")
+
+                    slider_col1, slider_col2, slider_col3 = st.columns(3)
+                    with slider_col1:
+                        slider_min = st.number_input(
+                            TEXT["min_value"][L],
+                            value=editing_question.get("min_value", 0) if editing_question else 0,
+                            key="new_q_slider_min"
+                        )
+                    with slider_col2:
+                        slider_max = st.number_input(
+                            TEXT["max_value_slider"][L],
+                            value=editing_question.get("max_value", 100) if editing_question else 100,
+                            key="new_q_slider_max"
+                        )
+                    with slider_col3:
+                        slider_default = st.number_input(
+                            TEXT["default_value"][L],
+                            value=editing_question.get("default_value", 50) if editing_question else 50,
+                            key="new_q_slider_default"
+                        )
+
+                    st.markdown(f"### {TEXT['scoring_thresholds'][L]}")
+
+                    # Initialize thresholds from editing question if available
+                    if editing_question and "edit_thresholds_initialized" not in st.session_state:
+                        st.session_state["new_question_thresholds"] = editing_question.get("scoring_thresholds", [
+                            {"min": 75, "score": 3}, {"min": 50, "score": 2}, {"min": 25, "score": 1}, {"min": 0, "score": 0}
+                        ])
+                        st.session_state["edit_thresholds_initialized"] = True
+
+                    thresholds = st.session_state.get("new_question_thresholds", [])
+
+                    for th_idx, threshold in enumerate(thresholds):
+                        th_col1, th_col2, th_col3 = st.columns([2, 2, 1])
+                        with th_col1:
+                            threshold["min"] = st.number_input(
+                                TEXT["threshold_min"][L],
+                                value=threshold.get("min", 0),
+                                key=f"th_{th_idx}_min"
+                            )
+                        with th_col2:
+                            threshold["score"] = st.number_input(
+                                TEXT["threshold_score"][L],
+                                value=threshold.get("score", 0),
+                                key=f"th_{th_idx}_score"
+                            )
+                        with th_col3:
+                            if len(thresholds) > 1:
+                                st.markdown("<br>", unsafe_allow_html=True)
+                                if st.button(TEXT["remove_option"][L], key=f"remove_th_{th_idx}"):
+                                    thresholds.pop(th_idx)
+                                    st.session_state["new_question_thresholds"] = thresholds
+                                    st.rerun()
+
+                    if st.button(TEXT["add_threshold"][L], key="add_threshold_btn"):
+                        thresholds.append({"min": 0, "score": 0})
+                        st.session_state["new_question_thresholds"] = thresholds
+                        st.rerun()
+
+                # Save/Cancel buttons
+                st.markdown("---")
+                save_col, cancel_col = st.columns(2)
+                with save_col:
+                    if st.button(TEXT["save_question"][L], type="primary", use_container_width=True):
+                        # Validation
+                        error = None
+                        if not q_id or not q_id.strip():
+                            error = TEXT["question_id_required"][L]
+                        elif not q_text_en or not q_text_en.strip():
+                            error = TEXT["question_text_required"][L]
+                        elif not editing_question:
+                            # Check if ID already exists (only for new questions)
+                            existing_ids = [q["id"] for q in questions]
+                            if q_id.strip().lower() in existing_ids:
+                                error = TEXT["question_id_exists"][L]
+                        elif type_value == "select":
+                            # Check at least one option
+                            valid_options = [o for o in st.session_state.get("new_question_options", []) if o.get("en", "").strip()]
+                            if not valid_options:
+                                error = TEXT["at_least_one_option"][L]
+
+                        if error:
+                            st.error(error)
+                        else:
+                            # Build question object
+                            weight_key = f"sub_{q_id.strip().lower()}"
+                            new_question = {
+                                "id": q_id.strip().lower() if not editing_question else editing_question["id"],
+                                "category": category_value,
+                                "type": type_value,
+                                "weight_key": weight_key if not editing_question else editing_question.get("weight_key", weight_key),
+                                "max_score": q_max_score,
+                                "labels": {
+                                    "en": q_text_en.strip(),
+                                    "fr": q_text_fr.strip() if q_text_fr else q_text_en.strip(),
+                                    "de": q_text_de.strip() if q_text_de else q_text_en.strip()
+                                },
+                                "help": {
+                                    "en": h_text_en.strip() if h_text_en else "",
+                                    "fr": h_text_fr.strip() if h_text_fr else h_text_en.strip() if h_text_en else "",
+                                    "de": h_text_de.strip() if h_text_de else h_text_en.strip() if h_text_en else ""
+                                }
+                            }
+
+                            if type_value == "select":
+                                new_question["display_horizontal"] = display_horizontal
+                                new_question["options"] = [
+                                    {
+                                        "score": opt["score"],
+                                        "labels": {
+                                            "en": opt["en"].strip(),
+                                            "fr": opt["fr"].strip() if opt["fr"] else opt["en"].strip(),
+                                            "de": opt["de"].strip() if opt["de"] else opt["en"].strip()
+                                        }
+                                    }
+                                    for opt in st.session_state.get("new_question_options", [])
+                                    if opt.get("en", "").strip()
+                                ]
+                            else:  # slider
+                                new_question["min_value"] = int(slider_min)
+                                new_question["max_value"] = int(slider_max)
+                                new_question["default_value"] = int(slider_default)
+                                new_question["step"] = 1
+                                new_question["unit"] = "%"
+                                new_question["scoring_thresholds"] = sorted(
+                                    st.session_state.get("new_question_thresholds", []),
+                                    key=lambda x: x["min"],
+                                    reverse=True
+                                )
+
+                            # Update or add question
+                            if editing_question:
+                                questions = [new_question if q["id"] == editing_question["id"] else q for q in questions]
+                            else:
+                                questions.append(new_question)
+
+                            # Save questions
+                            st.session_state["questions"] = questions
+                            _persist_questions(questions)
+
+                            # Update weights with new question's weight
+                            weights = st.session_state.get("weights", _load_weights_from_disk())
+                            weight_key_to_use = new_question["weight_key"]
+                            if weight_key_to_use not in weights:
+                                weights[weight_key_to_use] = q_initial_weight / 100
+                            else:
+                                weights[weight_key_to_use] = q_initial_weight / 100
+                            st.session_state["weights"] = weights
+                            _persist_weights(weights)
+
+                            # Reset state
+                            st.session_state["show_add_question"] = False
+                            st.session_state["editing_question_id"] = None
+                            st.session_state["new_question_options"] = [{"en": "", "fr": "", "de": "", "score": 1}]
+                            st.session_state["new_question_thresholds"] = [{"min": 75, "score": 3}, {"min": 50, "score": 2}, {"min": 25, "score": 1}, {"min": 0, "score": 0}]
+                            if "edit_options_initialized" in st.session_state:
+                                del st.session_state["edit_options_initialized"]
+                            if "edit_thresholds_initialized" in st.session_state:
+                                del st.session_state["edit_thresholds_initialized"]
+
+                            st.success(TEXT["question_saved"][L])
+                            st.rerun()
+
+                with cancel_col:
+                    if st.button(TEXT["cancel"][L], use_container_width=True):
+                        st.session_state["show_add_question"] = False
+                        st.session_state["editing_question_id"] = None
+                        st.session_state["new_question_options"] = [{"en": "", "fr": "", "de": "", "score": 1}]
+                        st.session_state["new_question_thresholds"] = [{"min": 75, "score": 3}, {"min": 50, "score": 2}, {"min": 25, "score": 1}, {"min": 0, "score": 0}]
+                        if "edit_options_initialized" in st.session_state:
+                            del st.session_state["edit_options_initialized"]
+                        if "edit_thresholds_initialized" in st.session_state:
+                            del st.session_state["edit_thresholds_initialized"]
+                        st.rerun()
 
 # -------------------------------------------------------
 # PAGE 3 — ENTER ADDRESSES
@@ -1635,111 +2348,65 @@ def page_questions():
     </style>
     """, unsafe_allow_html=True)
 
-    # ── QUESTION 1: OWNER TYPE ──
-    st.markdown(f"""
-    <div class="question-card">
-        <div class="question-title"><span class="question-number">1</span>{TEXT['owner_type'][L]}</div>
-        <div class="question-help">{TEXT['owner_type_help'][L]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    owner_type = st.radio(
-        "owner_type_radio",
-        QUESTION_OPTIONS["owner"][L],
-        key=prefix + "owner",
-        label_visibility="collapsed"
-    )
+    # ── DYNAMIC QUESTIONS FROM JSON ──
+    questions = st.session_state.get("questions", _load_questions_from_disk())
+    answers_dict = {}
 
-    # ── QUESTION 2: ESG ──
-    st.markdown(f"""
-    <div class="question-card">
-        <div class="question-title"><span class="question-number">2</span>{TEXT['esg'][L]}</div>
-        <div class="question-help">{TEXT['esg_help'][L]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    esg = st.radio(
-        "esg_radio",
-        QUESTION_OPTIONS["esg"][L],
-        key=prefix + "esg",
-        label_visibility="collapsed"
-    )
+    for q_idx, question in enumerate(questions):
+        q_id = question["id"]
+        q_label = question["labels"].get(L, question["labels"].get("en", "Question"))
+        q_help = question["help"].get(L, question["help"].get("en", ""))
 
-    # ── QUESTION 3: DAYTIME ──
-    st.markdown(f"""
-    <div class="question-card">
-        <div class="question-title"><span class="question-number">3</span>{TEXT['daytime'][L]}</div>
-        <div class="question-help">{TEXT['daytime_help'][L]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    col_slider, col_value = st.columns([4, 1])
-    with col_slider:
-        daytime = st.slider(
-            "daytime_slider",
-            0, 100, 60,
-            key=prefix + "daytime",
-            label_visibility="collapsed"
-        )
-    with col_value:
-        st.markdown(
-            f"<div style='background: #00FF40; color: #000; padding: 0.5rem 1rem; border-radius: 8px; text-align: center; font-size: 1.3rem; font-weight: 700;'>{daytime}%</div>",
-            unsafe_allow_html=True
-        )
+        # Render question card
+        st.markdown(f"""
+        <div class="question-card">
+            <div class="question-title"><span class="question-number">{q_idx + 1}</span>{q_label}</div>
+            <div class="question-help">{q_help}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # ── QUESTION 4: SPEND ──
-    st.markdown(f"""
-    <div class="question-card">
-        <div class="question-title"><span class="question-number">4</span>{TEXT['spend'][L]}</div>
-        <div class="question-help">{TEXT['spend_help'][L]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    spend = st.radio(
-        "spend_radio",
-        QUESTION_OPTIONS["spend"][L],
-        key=prefix + "spend",
-        label_visibility="collapsed",
-        horizontal=True
-    )
+        if question["type"] == "slider":
+            # Slider question
+            min_val = question.get("min_value", 0)
+            max_val = question.get("max_value", 100)
+            default_val = question.get("default_value", 50)
+            unit = question.get("unit", "%")
 
-    # ── QUESTION 5: SEASON ──
-    st.markdown(f"""
-    <div class="question-card">
-        <div class="question-title"><span class="question-number">5</span>{TEXT['season'][L]}</div>
-        <div class="question-help">{TEXT['season_help'][L]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    season = st.radio(
-        "season_radio",
-        QUESTION_OPTIONS["season"][L],
-        key=prefix + "season",
-        label_visibility="collapsed"
-    )
+            col_slider, col_value = st.columns([4, 1])
+            with col_slider:
+                answer_value = st.slider(
+                    f"{q_id}_slider",
+                    min_val, max_val, default_val,
+                    key=prefix + q_id,
+                    label_visibility="collapsed"
+                )
+            with col_value:
+                st.markdown(
+                    f"<div style='background: #00FF40; color: #000; padding: 0.5rem 1rem; border-radius: 8px; text-align: center; font-size: 1.3rem; font-weight: 700;'>{answer_value}{unit}</div>",
+                    unsafe_allow_html=True
+                )
+            answers_dict[q_id] = answer_value
+        else:
+            # Select/radio question
+            options = question.get("options", [])
+            option_labels = [opt["labels"].get(L, opt["labels"].get("en", "Option")) for opt in options]
+            is_horizontal = question.get("display_horizontal", False)
 
-    # ── QUESTION 6: 24/7 LOADS ──
-    st.markdown(f"""
-    <div class="question-card">
-        <div class="question-title"><span class="question-number">6</span>{TEXT['loads'][L]}</div>
-        <div class="question-help">{TEXT['loads_help'][L]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    loads = st.radio(
-        "loads_radio",
-        QUESTION_OPTIONS["loads"][L],
-        key=prefix + "247",
-        label_visibility="collapsed",
-        horizontal=True
-    )
+            answer_value = st.radio(
+                f"{q_id}_radio",
+                option_labels,
+                key=prefix + q_id,
+                label_visibility="collapsed",
+                horizontal=is_horizontal
+            )
+            answers_dict[q_id] = answer_value
 
     # ─────────────────────────────────────────────────────────
     # SAVE ANSWERS
     # ─────────────────────────────────────────────────────────
-    st.session_state["answers"][idx] = {
-        "owner_type": owner_type,
-        "esg": esg,
-        "daytime": daytime,
-        "spend": spend,
-        "season": season,
-        "loads": loads,
-        "roof_score": compute_roof_score(site["roof_area"]),
-    }
+    # Store all answers including roof_score
+    answers_dict["roof_score"] = compute_roof_score(site["roof_area"])
+    st.session_state["answers"][idx] = answers_dict
 
     # ─────────────────────────────────────────────────────────
     # NAVIGATION BUTTONS
