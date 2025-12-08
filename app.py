@@ -4,7 +4,7 @@ import base64
 from pathlib import Path
 
 import streamlit as st
-from modules.sonnendach import get_sonnendach_info
+# sonnendach auto-fetch removed - users will enter data manually via sonnendach.ch link
 
 # -------------------------------------------------------
 # PAGE CONFIG
@@ -21,7 +21,8 @@ if "intro_video_watched" not in st.session_state:
     st.session_state.intro_video_watched = False
 
 # Check if video ended via query param
-if st.query_params.get("video_ended") == "true":
+query_params = st.query_params.to_dict()
+if query_params.get("video_ended") == "true":
     st.session_state.intro_video_watched = True
     st.query_params.clear()
     st.rerun()
@@ -36,132 +37,85 @@ if not st.session_state.intro_video_watched:
             break
 
     if video_path:
-        # Read and encode video as base64
+        # Read video as base64
         with open(video_path, "rb") as video_file:
             video_bytes = video_file.read()
             video_base64 = base64.b64encode(video_bytes).decode()
 
-        # Use st.components.v1.html for proper JavaScript execution
-        import streamlit.components.v1 as components
+        # Get the base URL for redirect
+        base_url = st.query_params.to_dict()
 
-        # Fullscreen video with autoplay (muted required by browsers for autoplay)
-        video_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                * {{
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }}
-                html, body {{
-                    width: 100%;
-                    height: 100%;
-                    background: #000;
-                    overflow: hidden;
-                }}
-                .video-wrapper {{
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100vw;
-                    height: 100vh;
-                    background: #000;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 9999;
-                }}
-                video {{
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: contain;
-                }}
-                .skip-btn {{
-                    position: fixed;
-                    bottom: 30px;
-                    right: 30px;
-                    background: rgba(255, 255, 255, 0.2);
-                    color: white;
-                    border: 1px solid rgba(255, 255, 255, 0.4);
-                    padding: 12px 28px;
-                    font-size: 14px;
-                    font-family: sans-serif;
-                    cursor: pointer;
-                    border-radius: 25px;
-                    z-index: 10000;
-                    transition: background 0.3s;
-                }}
-                .skip-btn:hover {{
-                    background: rgba(255, 255, 255, 0.4);
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="video-wrapper">
-                <video id="introVideo" autoplay muted playsinline>
-                    <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-                </video>
-            </div>
-            <button class="skip-btn" onclick="skipVideo()">Skip ⏭</button>
-            <script>
-                const video = document.getElementById('introVideo');
-
-                // Force play on load
-                document.addEventListener('DOMContentLoaded', function() {{
-                    video.play().catch(function(e) {{
-                        console.log('Autoplay prevented:', e);
-                    }});
-                }});
-
-                // Also try to play immediately
-                video.play().catch(function(e) {{
-                    console.log('Autoplay prevented:', e);
-                }});
-
-                // Try to unmute after a short delay
-                setTimeout(function() {{
-                    video.muted = false;
-                }}, 500);
-
-                function skipVideo() {{
-                    goToApp();
-                }}
-
-                // When video ends, go to app
-                video.addEventListener('ended', function() {{
-                    goToApp();
-                }});
-
-                function goToApp() {{
-                    const url = new URL(window.parent.location.href);
-                    url.searchParams.set('video_ended', 'true');
-                    window.parent.location.href = url.toString();
-                }}
-            </script>
-        </body>
-        </html>
-        """
-
-        # Hide Streamlit UI elements during video
+        # Simple fullscreen video page
         st.markdown("""
         <style>
-            .block-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
-            header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
-            [data-testid="stAppViewContainer"] { background: #000 !important; padding: 0 !important; }
-            html, body, [data-testid="stApp"] { background: #000 !important; overflow: hidden !important; }
-            .stMainBlockContainer { padding: 0 !important; }
-            iframe { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; border: none !important; }
+            #root > div:first-child,
+            .block-container,
+            .stApp > header,
+            [data-testid="stHeader"],
+            [data-testid="stToolbar"],
+            [data-testid="stDecoration"],
+            footer {
+                display: none !important;
+            }
+            .stApp, [data-testid="stAppViewContainer"], .main {
+                background: #000 !important;
+                padding: 0 !important;
+            }
+            .video-fullscreen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: #000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+            .video-fullscreen video {
+                max-width: 100%;
+                max-height: 100%;
+            }
+            .skip-button {
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                background: rgba(255,255,255,0.2);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.4);
+                padding: 12px 28px;
+                font-size: 14px;
+                cursor: pointer;
+                border-radius: 25px;
+                z-index: 10000;
+                text-decoration: none;
+            }
+            .skip-button:hover {
+                background: rgba(255,255,255,0.4);
+            }
         </style>
+        """ + f"""
+        <div class="video-fullscreen">
+            <video id="myVideo" autoplay muted playsinline onended="videoEnded()">
+                <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+            </video>
+        </div>
+        <a href="?video_ended=true" class="skip-button">Skip ⏭</a>
+        <script>
+            function videoEnded() {{
+                window.location.href = '?video_ended=true';
+            }}
+            // Ensure video plays
+            var vid = document.getElementById('myVideo');
+            if (vid) {{
+                vid.play();
+            }}
+        </script>
         """, unsafe_allow_html=True)
 
-        components.html(video_html, height=1000, scrolling=False)
-
-        # Stop execution here - don't show the rest of the app
         st.stop()
     else:
-        # Video not found, skip intro
         st.session_state.intro_video_watched = True
 
 # -------------------------------------------------------
@@ -1543,11 +1497,6 @@ def page_address_entry():
             key=f"canton_{idx}"
         )
 
-        # Debug: show raw Sonnendach response if available
-        if entry.get("sonnendach_raw") is not None:
-            with st.expander("Debug Sonnendach data", expanded=False):
-                st.json(entry["sonnendach_raw"])
-
         st.markdown(f"**{TEXT['manual_roof_prompt'][L]}**")
         st.caption(TEXT["roof_data_local_hint"][L])
         st.caption(TEXT["manual_roof_hint"][L], unsafe_allow_html=True)
@@ -1588,46 +1537,9 @@ def page_address_entry():
 
         st.markdown("---")
 
-    # Create a placeholder for the loading message
-    status_placeholder = st.empty()
-    
     if st.button(TEXT["save_continue"][L], use_container_width=True, type="primary"):
-        # Show loading status
-        with status_placeholder.container():
-            st.info("🔄 Fetching rooftop data, please wait...")
-
-        # Fetch rooftop data for all addresses before continuing
-        all_success = True
-        lookup_errors = []
-        with st.spinner(""):
-            for idx, entry in enumerate(st.session_state["addresses"]):
-                if entry["address"] and entry["canton"] and not entry["roof_area"]:
-                    data = get_sonnendach_info(entry["address"])
-
-                    # Store raw data for debugging so we can inspect it on the address page
-                    entry["sonnendach_raw"] = data
-
-                    if data:
-                        # TODO: adjust these keys once we see the exact Sonnendach structure
-                        entry["roof_area"] = data.get("surface_area_m2")
-                        entry["roof_pitch"] = data.get("roof_pitch_deg")
-                        entry["roof_orientation"] = data.get("roof_heading_deg")
-                        if data.get("error"):
-                            lookup_errors.append(data.get("error"))
-                    if entry.get("roof_area") is None:
-                        all_success = False
-
-        if all_success:
-            status_placeholder.success("✅ Data loaded successfully! Proceeding...")
-            import time
-            time.sleep(1)
-            goto("questions")
-            st.rerun()
-        else:
-            status_placeholder.warning(TEXT["manual_fill_warning"][L])
-            if lookup_errors:
-                for err in dict.fromkeys(lookup_errors):
-                    status_placeholder.caption(f"• {err}")
+        goto("questions")
+        st.rerun()
 
 # -------------------------------------------------------
 # PAGE 4 — QUESTIONS (ONE PAGE PER ADDRESS)
@@ -1670,10 +1582,6 @@ def page_questions():
             """,
             unsafe_allow_html=True
         )
-
-    if site.get("sonnendach_raw") is not None:
-        with st.expander("🔍 Debug roof data", expanded=False):
-            st.json(site["sonnendach_raw"])
 
     prefix = f"a{idx}_"
 
