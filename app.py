@@ -20,6 +20,12 @@ st.set_page_config(
 if "intro_video_watched" not in st.session_state:
     st.session_state.intro_video_watched = False
 
+# Check if video ended via query param
+if st.query_params.get("video_ended") == "true":
+    st.session_state.intro_video_watched = True
+    st.query_params.clear()
+    st.rerun()
+
 if not st.session_state.intro_video_watched:
     # Find the video file
     video_paths = ["My Movie.mp4", "Solar21app/My Movie.mp4", "./My Movie.mp4"]
@@ -94,34 +100,56 @@ if not st.session_state.intro_video_watched:
         </style>
         """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div class="video-container">
+        # Use st.components.v1.html for proper JavaScript execution
+        import streamlit.components.v1 as components
+
+        video_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    background: #000;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    overflow: hidden;
+                }}
+                video {{
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                }}
+            </style>
+        </head>
+        <body>
             <video id="introVideo" autoplay muted playsinline>
                 <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-                Your browser does not support the video tag.
             </video>
-        </div>
+            <script>
+                const video = document.getElementById('introVideo');
 
-        <script>
-            const video = document.getElementById('introVideo');
+                // Try to unmute
+                setTimeout(function() {{
+                    video.muted = false;
+                }}, 100);
 
-            // Try to unmute after a short delay (some browsers allow this after user interaction)
-            setTimeout(function() {{
-                video.muted = false;
-            }}, 100);
-
-            // When video ends, click the skip button to trigger state change
-            video.addEventListener('ended', function() {{
-                // Find and click the Streamlit button
-                const buttons = window.parent.document.querySelectorAll('button');
-                buttons.forEach(function(btn) {{
-                    if (btn.innerText.includes('Skip')) {{
-                        btn.click();
-                    }}
+                // When video ends, redirect with query param to trigger Streamlit rerun
+                video.addEventListener('ended', function() {{
+                    // Get current URL and add query param
+                    const url = new URL(window.parent.location.href);
+                    url.searchParams.set('video_ended', 'true');
+                    window.parent.location.href = url.toString();
                 }});
-            }});
-        </script>
-        """, unsafe_allow_html=True)
+            </script>
+        </body>
+        </html>
+        """
+
+        components.html(video_html, height=600, scrolling=False)
 
         # Skip button - visible and clickable
         if st.button("Skip ⏭", key="skip_intro"):
