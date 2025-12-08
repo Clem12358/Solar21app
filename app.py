@@ -102,26 +102,13 @@ if not st.session_state.intro_video_watched:
         """, unsafe_allow_html=True)
 
         st.markdown(f"""
+        <meta http-equiv="refresh" content="20;url=?video_ended=true">
         <div class="video-container">
             <video id="introVideo" autoplay muted playsinline>
                 <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         </div>
-
-        <script>
-            const video = document.getElementById('introVideo');
-
-            // Try to unmute after a short delay
-            setTimeout(function() {{
-                video.muted = false;
-            }}, 100);
-
-            // When video ends, redirect to trigger page reload with query param
-            video.addEventListener('ended', function() {{
-                window.location.href = window.location.pathname + '?video_ended=true';
-            }});
-        </script>
         """, unsafe_allow_html=True)
 
         # Skip button - visible and clickable
