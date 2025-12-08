@@ -20,6 +20,12 @@ st.set_page_config(
 if "intro_video_watched" not in st.session_state:
     st.session_state.intro_video_watched = False
 
+# Check if video ended via query param
+if st.query_params.get("video_ended") == "true":
+    st.session_state.intro_video_watched = True
+    st.query_params.clear()
+    st.rerun()
+
 if not st.session_state.intro_video_watched:
     # Find the video file
     video_paths = ["My Movie.mp4", "Solar21app/My Movie.mp4", "./My Movie.mp4"]
@@ -94,34 +100,56 @@ if not st.session_state.intro_video_watched:
         </style>
         """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div class="video-container">
+        # Use st.components.v1.html for proper JavaScript execution
+        import streamlit.components.v1 as components
+
+        video_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    background: #000;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    overflow: hidden;
+                }}
+                video {{
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                }}
+            </style>
+        </head>
+        <body>
             <video id="introVideo" autoplay muted playsinline>
                 <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-                Your browser does not support the video tag.
             </video>
-        </div>
+            <script>
+                const video = document.getElementById('introVideo');
 
-        <script>
-            const video = document.getElementById('introVideo');
+                // Try to unmute
+                setTimeout(function() {{
+                    video.muted = false;
+                }}, 100);
 
-            // Try to unmute after a short delay (some browsers allow this after user interaction)
-            setTimeout(function() {{
-                video.muted = false;
-            }}, 100);
-
-            // When video ends, click the skip button to trigger state change
-            video.addEventListener('ended', function() {{
-                // Find and click the Streamlit button
-                const buttons = window.parent.document.querySelectorAll('button');
-                buttons.forEach(function(btn) {{
-                    if (btn.innerText.includes('Skip')) {{
-                        btn.click();
-                    }}
+                // When video ends, redirect with query param to trigger Streamlit rerun
+                video.addEventListener('ended', function() {{
+                    // Get current URL and add query param
+                    const url = new URL(window.parent.location.href);
+                    url.searchParams.set('video_ended', 'true');
+                    window.parent.location.href = url.toString();
                 }});
-            }});
-        </script>
-        """, unsafe_allow_html=True)
+            </script>
+        </body>
+        </html>
+        """
+
+        components.html(video_html, height=600, scrolling=False)
 
         # Skip button - visible and clickable
         if st.button("Skip ⏭", key="skip_intro"):
@@ -296,40 +324,50 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# LOGO (centered)
+# LOGO (centered with high quality)
 # -------------------------------------------------------
 
-# Center the logo using columns
-logo_col1, logo_col2, logo_col3 = st.columns([1, 1, 1])
-with logo_col2:
-    # Try multiple possible paths for the logo
-    possible_paths = [
-        "Solar21app/solar21_logo.png",
-        "solar21_logo.png",
-        "./solar21_logo.png",
-        "../solar21_logo.png"
-    ]
-    
-    logo_loaded = False
-    for path in possible_paths:
-        if os.path.exists(path):
-            # Center the image within the column
-            st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
-            st.image(path, width=200)
-            st.markdown('</div>', unsafe_allow_html=True)
-            logo_loaded = True
-            break
-    
-    if not logo_loaded:
+# Try multiple possible paths for the logo
+possible_logo_paths = [
+    "solar21_logo.png",
+    "Solar21app/solar21_logo.png",
+    "./solar21_logo.png",
+    "../solar21_logo.png"
+]
+
+logo_loaded = False
+for logo_path in possible_logo_paths:
+    if os.path.exists(logo_path):
+        # Load logo as base64 for high quality display
+        with open(logo_path, "rb") as img_file:
+            logo_base64 = base64.b64encode(img_file.read()).decode()
+
+        # Display centered logo using HTML (better centering than st.columns)
         st.markdown(
-            """
-            <div style="text-align:center; margin-bottom:20px;">
-                <h1 style="color: #1a1a1a; margin: 0; font-size: 2rem;">Solar21</h1>
-                <p style="color: #666; font-size: 0.9rem;">Evaluation Tool</p>
+            f"""
+            <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px;">
+                <img src="data:image/png;base64,{logo_base64}"
+                     style="width: 250px; height: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;"
+                     alt="Solar21 Logo">
             </div>
             """,
             unsafe_allow_html=True
         )
+        logo_loaded = True
+        break
+
+if not logo_loaded:
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px;">
+            <div style="text-align: center;">
+                <h1 style="color: #1a1a1a; margin: 0; font-size: 2rem;">Solar21</h1>
+                <p style="color: #666; font-size: 0.9rem;">Evaluation Tool</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 st.markdown("<br>", unsafe_allow_html=True)
 
 # -------------------------------------------------------
