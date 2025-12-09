@@ -102,7 +102,7 @@ if not st.session_state.intro_video_watched:
         """, unsafe_allow_html=True)
 
         st.markdown(f"""
-        <meta http-equiv="refresh" content="20;url=?video_ended=true">
+        <meta http-equiv="refresh" content="16;url=?video_ended=true">
         <div class="video-container">
             <video id="introVideo" autoplay muted playsinline>
                 <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
