@@ -113,4 +113,10 @@ For questions about the tool or Solar21's partnership program, please contact So
 
 ---
 
+## Aids and Tools
+
+Claude AI was extensively used to support the development of this app.
+
+---
+
 *This tool is provided by Solar21 to support its partner network in identifying promising solar project opportunities.*
