@@ -968,14 +968,14 @@ TEXT = {
     },
     "recommendation": {
         "exceptional": {
-            "en": "Engage immediately. Priority 1.",
-            "fr": "Engager immédiatement. Priorité 1.",
-            "de": "Sofort engagieren. Priorität 1."
+            "en": "High priority opportunity.",
+            "fr": "Opportunité hautement prioritaire.",
+            "de": "Hochprioritäre Gelegenheit."
         },
         "strong": {
-            "en": "Move forward quickly.",
-            "fr": "Avancer rapidement.",
-            "de": "Schnell voranschreiten."
+            "en": "Promising candidate for next steps.",
+            "fr": "Candidat prometteur pour les prochaines étapes.",
+            "de": "Vielversprechender Kandidat für nächste Schritte."
         },
         "moderate": {
             "en": "Needs deeper analysis (segment loads, roof segmentation).",
@@ -1639,42 +1639,108 @@ def page_lang():
 
 def page_role_selection():
     L = st.session_state["language"]
-    st.title(TEXT["role_title"][L])
+
+    # Centered title with subtitle
+    st.markdown(f"""
+    <div style='text-align: center; padding: 2rem 0 1rem 0;'>
+        <h1 style='margin-bottom: 0.5rem;'>☀️ {TEXT["role_title"][L]}</h1>
+        <p style='color: #666; font-size: 1.1rem;'>{"Select your role to continue" if L == "en" else "Sélectionnez votre rôle pour continuer" if L == "fr" else "Wählen Sie Ihre Rolle, um fortzufahren"}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Preserve radio selection based on current authentication state
-    default_index = 1 if st.session_state.get("employee_authenticated") else 0
+    # Initialize role selection state if not exists
+    if "selected_role" not in st.session_state:
+        st.session_state["selected_role"] = "employee" if st.session_state.get("employee_authenticated") else None
 
-    choice = st.radio(
-        "",
-        [TEXT["partner_option"][L], TEXT["employee_option"][L]],
-        key="role_choice",
-        index=default_index,
-        label_visibility="collapsed",
-    )
+    # Two-column card layout
+    col1, col2 = st.columns(2, gap="large")
 
-    if choice == TEXT["partner_option"][L]:
-        # Only reset if explicitly switching from Employee to Partner
-        if st.session_state.get("employee_authenticated"):
+    with col1:
+        # Partner card
+        partner_selected = st.session_state.get("selected_role") == "partner"
+        border_color = "#22c55e" if partner_selected else "#e0e0e0"
+        bg_color = "#f0fdf4" if partner_selected else "#fafafa"
+
+        st.markdown(f"""
+        <div style='
+            border: 2px solid {border_color};
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            background: {bg_color};
+            min-height: 200px;
+            transition: all 0.2s;
+        '>
+            <div style='font-size: 3rem; margin-bottom: 1rem;'>🤝</div>
+            <h3 style='margin-bottom: 0.5rem; color: #1f2937;'>{"Partner" if L == "en" else "Partenaire" if L == "fr" else "Partner"}</h3>
+            <p style='color: #6b7280; font-size: 0.9rem;'>{"Evaluate sites for Solar21 projects" if L == "en" else "Évaluer des sites pour les projets Solar21" if L == "fr" else "Standorte für Solar21-Projekte bewerten"}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button(TEXT["partner_option"][L], key="btn_partner", use_container_width=True,
+                     type="primary" if partner_selected else "secondary"):
+            st.session_state["selected_role"] = "partner"
             st.session_state["employee_authenticated"] = False
+            st.rerun()
+
+    with col2:
+        # Employee card
+        employee_selected = st.session_state.get("selected_role") == "employee"
+        border_color = "#22c55e" if employee_selected else "#e0e0e0"
+        bg_color = "#f0fdf4" if employee_selected else "#fafafa"
+
+        st.markdown(f"""
+        <div style='
+            border: 2px solid {border_color};
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            background: {bg_color};
+            min-height: 200px;
+            transition: all 0.2s;
+        '>
+            <div style='font-size: 3rem; margin-bottom: 1rem;'>⚙️</div>
+            <h3 style='margin-bottom: 0.5rem; color: #1f2937;'>{"Employee" if L == "en" else "Employé" if L == "fr" else "Mitarbeiter"}</h3>
+            <p style='color: #6b7280; font-size: 0.9rem;'>{"Configure weights and manage questions" if L == "en" else "Configurer les poids et gérer les questions" if L == "fr" else "Gewichte konfigurieren und Fragen verwalten"}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button(TEXT["employee_option"][L], key="btn_employee", use_container_width=True,
+                     type="primary" if employee_selected else "secondary"):
+            st.session_state["selected_role"] = "employee"
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Partner flow - show proceed button
+    if st.session_state.get("selected_role") == "partner":
+        st.markdown("---")
         if st.button(TEXT["proceed"][L], type="primary", use_container_width=True):
             goto("address_entry")
             st.rerun()
         return
 
-    # Employee branch
-    pwd = st.text_input(
-        TEXT["employee_password"][L],
-        type="password",
-        key="employee_password_input",
-    )
+    # Employee flow - show password and settings
+    if st.session_state.get("selected_role") == "employee":
+        st.markdown("---")
 
-    if pwd:
-        if pwd == EMPLOYEE_PASSWORD:
-            st.session_state["employee_authenticated"] = True
-        else:
-            st.session_state["employee_authenticated"] = False
-            st.error(TEXT["employee_password_error"][L])
+        if not st.session_state.get("employee_authenticated"):
+            st.markdown(f"🔐 **{TEXT['employee_password'][L]}**")
+            pwd = st.text_input(
+                TEXT["employee_password"][L],
+                type="password",
+                key="employee_password_input",
+                label_visibility="collapsed",
+            )
+
+            if pwd:
+                if pwd == EMPLOYEE_PASSWORD:
+                    st.session_state["employee_authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error(TEXT["employee_password_error"][L])
 
     if st.session_state.get("employee_authenticated"):
         st.success(TEXT["weights_subtext"][L])
