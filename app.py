@@ -745,9 +745,9 @@ TEXT = {
         "de": "Falls die Dachdaten nicht automatisch abgerufen werden können, geben Sie sie bitte manuell ein:",
     },
     "manual_roof_hint": {
-        "en": "You can also approximate these values on <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a>.",
-        "fr": "Vous pouvez également estimer ces valeurs sur <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a>.",
-        "de": "Sie können diese Werte auch auf <a href=\"https://www.sonnendach.ch\" target=\"_blank\">sonnendach.ch</a> abschätzen.",
+        "en": "Enter rooftop values manually. You can find these values on [sonnendach.ch](https://www.sonnendach.ch)",
+        "fr": "Saisissez les valeurs du toit manuellement. Vous pouvez trouver ces valeurs sur [sonnendach.ch](https://www.sonnendach.ch)",
+        "de": "Geben Sie die Dachwerte manuell ein. Sie finden diese Werte auf [sonnendach.ch](https://www.sonnendach.ch)",
     },
     "roof_area_input": {
         "en": "Rooftop area (m²)",
@@ -2304,8 +2304,6 @@ def page_address_entry():
     st.title(TEXT["address_title"][L])
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.warning(TEXT["roof_data_local_hint"][L])
-
     col_add, col_space = st.columns([1, 3])
     with col_add:
         if st.button(TEXT["add_site"][L], type="primary"):
@@ -2364,9 +2362,7 @@ def page_address_entry():
             key=f"canton_{idx}"
         )
 
-        st.markdown(f"**{TEXT['manual_roof_prompt'][L]}**")
-        st.caption(TEXT["roof_data_local_hint"][L])
-        st.caption(TEXT["manual_roof_hint"][L], unsafe_allow_html=True)
+        st.info(TEXT["manual_roof_hint"][L], icon="🏠")
         col_area, col_pitch, col_orient = st.columns(3)
         area_val = col_area.number_input(
             TEXT["roof_area_input"][L],
