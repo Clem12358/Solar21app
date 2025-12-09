@@ -754,16 +754,6 @@ TEXT = {
         "fr": "Surface du toit (m²)",
         "de": "Dachfläche (m²)",
     },
-    "roof_pitch_input": {
-        "en": "Roof pitch (°)",
-        "fr": "Inclinaison du toit (°)",
-        "de": "Dachneigung (°)",
-    },
-    "roof_orientation_input": {
-        "en": "Roof orientation (°)",
-        "fr": "Orientation du toit (°)",
-        "de": "Dachausrichtung (°)",
-    },
     "manual_fill_warning": {
         "en": "Automatic lookup failed. Please fill the rooftop values manually, then click Save & continue again.",
         "fr": "La récupération automatique a échoué. Merci de renseigner manuellement les valeurs du toit, puis de cliquer à nouveau sur Enregistrer & continuer.",
@@ -2377,8 +2367,6 @@ def page_address_entry():
                 "address": "",
                 "canton": "",
                 "roof_area": None,
-                "roof_pitch": None,
-                "roof_orientation": None,
             })
             st.rerun()
 
@@ -2387,8 +2375,6 @@ def page_address_entry():
             "address": "",
             "canton": "",
             "roof_area": None,
-            "roof_pitch": None,
-            "roof_orientation": None,
         })
 
     for idx, entry in enumerate(st.session_state["addresses"]):
@@ -2429,34 +2415,15 @@ def page_address_entry():
         )
 
         st.info(TEXT["manual_roof_hint"][L], icon="🏠")
-        col_area, col_pitch, col_orient = st.columns(3)
-        area_val = col_area.number_input(
+        area_val = st.number_input(
             TEXT["roof_area_input"][L],
             min_value=0.0,
             value=float(entry["roof_area"]) if entry["roof_area"] is not None else 0.0,
             step=1.0,
             key=f"roof_area_{idx}",
         )
-        pitch_val = col_pitch.number_input(
-            TEXT["roof_pitch_input"][L],
-            min_value=0.0,
-            max_value=90.0,
-            value=float(entry["roof_pitch"]) if entry["roof_pitch"] is not None else 0.0,
-            step=1.0,
-            key=f"roof_pitch_{idx}",
-        )
-        orient_val = col_orient.number_input(
-            TEXT["roof_orientation_input"][L],
-            min_value=0.0,
-            max_value=360.0,
-            value=float(entry["roof_orientation"]) if entry["roof_orientation"] is not None else 0.0,
-            step=5.0,
-            key=f"roof_orientation_{idx}",
-        )
 
         entry["roof_area"] = area_val if area_val > 0 else None
-        entry["roof_pitch"] = pitch_val if pitch_val > 0 else None
-        entry["roof_orientation"] = orient_val if orient_val > 0 else None
 
         if entry["roof_area"] is not None:
             rs = compute_roof_score(entry["roof_area"])

@@ -32,7 +32,7 @@ Select English, French, or German.
 Add one or more addresses you want to evaluate. For each site, you'll need to provide:
 - The full address
 - The canton (Swiss region)
-- Rooftop information (area, pitch, orientation) — you can find these values on [sonnendach.ch](https://www.sonnendach.ch)
+- Rooftop area (m²) — you can find this value on [sonnendach.ch](https://www.sonnendach.ch)
 
 ### Step 4: Answer evaluation questions
 For each site, answer questions about:
@@ -71,7 +71,8 @@ The tool evaluates sites based on factors that indicate a successful solar partn
 
 **Roof characteristics**
 - Larger roofs (>1000 m²) score higher
-- Suitable pitch and orientation for solar panels
+- Roofs between 500-1000 m² score moderately
+- Smaller roofs (<500 m²) score lower
 
 **Owner profile**
 - Public entities and large institutions typically have easier financing
