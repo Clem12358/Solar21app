@@ -1642,15 +1642,21 @@ def page_role_selection():
     st.title(TEXT["role_title"][L])
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # Preserve radio selection based on current authentication state
+    default_index = 1 if st.session_state.get("employee_authenticated") else 0
+
     choice = st.radio(
         "",
         [TEXT["partner_option"][L], TEXT["employee_option"][L]],
         key="role_choice",
+        index=default_index,
         label_visibility="collapsed",
     )
 
     if choice == TEXT["partner_option"][L]:
-        st.session_state["employee_authenticated"] = False
+        # Only reset if explicitly switching from Employee to Partner
+        if st.session_state.get("employee_authenticated"):
+            st.session_state["employee_authenticated"] = False
         if st.button(TEXT["proceed"][L], type="primary", use_container_width=True):
             goto("address_entry")
             st.rerun()
@@ -1866,6 +1872,7 @@ def page_role_selection():
                 st.session_state["weights"] = new_weights
                 _persist_weights(new_weights)
                 st.success(f"✅ {TEXT['weights_saved'][L]}")
+                st.rerun()  # Refresh to update formula display
 
         with col_proceed:
             if st.button(TEXT["proceed"][L], use_container_width=True):
