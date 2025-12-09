@@ -1236,15 +1236,15 @@ TEXT = {
         "de": "Optionen horizontal anzeigen"
     },
     # New panel structure texts
-    "fixed_inputs_panel": {
-        "en": "Fixed Inputs",
-        "fr": "Entrées fixes",
-        "de": "Feste Eingaben"
+    "roof_size_note": {
+        "en": "📌 Roof size is a fixed input that cannot be edited or removed. Only its weight can be adjusted.",
+        "fr": "📌 La taille du toit est une entrée fixe qui ne peut pas être modifiée ou supprimée. Seul son poids peut être ajusté.",
+        "de": "📌 Die Dachgröße ist eine feste Eingabe, die nicht bearbeitet oder entfernt werden kann. Nur ihr Gewicht kann angepasst werden."
     },
-    "fixed_inputs_desc": {
-        "en": "These inputs are measured values that cannot be removed. You can adjust their weight in the score calculation.",
-        "fr": "Ces entrées sont des valeurs mesurées qui ne peuvent pas être supprimées. Vous pouvez ajuster leur poids dans le calcul du score.",
-        "de": "Diese Eingaben sind gemessene Werte, die nicht entfernt werden können. Sie können ihr Gewicht in der Punkteberechnung anpassen."
+    "score_formula_title": {
+        "en": "Score Calculation Formula",
+        "fr": "Formule de calcul du score",
+        "de": "Formel zur Punkteberechnung"
     },
     "structure_questions_panel": {
         "en": "Structure Questions Weights",
@@ -1675,6 +1675,49 @@ def page_role_selection():
 
         st.markdown(f"## {TEXT['weights_title'][L]}")
         st.caption(TEXT["fine_tune_hint"][L])
+
+        # ─────────────────────────────────────────────────────────
+        # DYNAMIC SCORE FORMULA
+        # ─────────────────────────────────────────────────────────
+        questions_for_formula = st.session_state.get("questions", _load_questions_from_disk())
+        weights_for_formula = st.session_state.get("weights", DEFAULT_WEIGHTS)
+
+        struct_qs = [q for q in questions_for_formula if q.get("category") == "structure"]
+        cons_qs = [q for q in questions_for_formula if q.get("category") == "consumption"]
+
+        # Get main weights
+        struct_w = weights_for_formula.get("structure", 0.4)
+        cons_w = weights_for_formula.get("consumption", 0.6)
+
+        # Build structure part of formula
+        struct_parts = []
+        roof_w = weights_for_formula.get("sub_roof", 0.4)
+        struct_parts.append(f"{roof_w:.0%} × Roof")
+        for q in struct_qs:
+            weight_key = q.get("weight_key", f"sub_{q['id']}")
+            w = weights_for_formula.get(weight_key, 0.2)
+            topic = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q["id"]))
+            struct_parts.append(f"{w:.0%} × {topic}")
+
+        # Build consumption part of formula
+        cons_parts = []
+        for q in cons_qs:
+            weight_key = q.get("weight_key", f"sub_{q['id']}")
+            w = weights_for_formula.get(weight_key, 0.2)
+            topic = q.get("topic", {}).get(L, q.get("topic", {}).get("en", q["id"]))
+            cons_parts.append(f"{w:.0%} × {topic}")
+
+        with st.expander(f"📐 {TEXT['score_formula_title'][L]}", expanded=False):
+            st.markdown("**Final Score =**")
+            st.markdown(f"""
+            `{struct_w:.0%}` × **Structure** × ({' + '.join(struct_parts)})
+
+            `+`
+
+            `{cons_w:.0%}` × **Consumption** × ({' + '.join(cons_parts) if cons_parts else 'No questions'})
+            """)
+            st.caption("Note: Sub-weights within each category are normalized to sum to 100%")
+
         st.markdown("---")
 
         # ─────────────────────────────────────────────────────────
@@ -1706,24 +1749,7 @@ def page_role_selection():
         weight_values = {}
 
         # ─────────────────────────────────────────────────────────
-        # PANEL 1: FIXED INPUTS (Roof Size)
-        # ─────────────────────────────────────────────────────────
-        with st.expander(f"⚙️ {TEXT['fixed_inputs_panel'][L]}", expanded=False):
-            st.markdown(f"""
-            <div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;'>
-            <small>{TEXT['fixed_inputs_desc'][L]}</small>
-            </div>
-            """, unsafe_allow_html=True)
-
-            sub_roof_default = int(round(st.session_state["weights"].get("sub_roof", DEFAULT_WEIGHTS["sub_roof"]) * 100))
-            weight_values["sub_roof"] = st.slider(
-                TEXT["roof_size_topic"][L],
-                0, 100, sub_roof_default,
-                step=5, format="%d%%", key="sub_roof"
-            )
-
-        # ─────────────────────────────────────────────────────────
-        # PANEL 2: STRUCTURE QUESTIONS WEIGHTS
+        # PANEL 1: STRUCTURE QUESTIONS WEIGHTS (includes Roof Size)
         # ─────────────────────────────────────────────────────────
         with st.expander(f"⚙️ {TEXT['structure_questions_panel'][L]}", expanded=False):
             st.markdown(f"""
@@ -1732,6 +1758,18 @@ def page_role_selection():
             </div>
             """, unsafe_allow_html=True)
 
+            # Roof size (fixed input - always first)
+            sub_roof_default = int(round(st.session_state["weights"].get("sub_roof", DEFAULT_WEIGHTS["sub_roof"]) * 100))
+            weight_values["sub_roof"] = st.slider(
+                TEXT["roof_size_topic"][L],
+                0, 100, sub_roof_default,
+                step=5, format="%d%%", key="sub_roof"
+            )
+            st.info(TEXT["roof_size_note"][L])
+
+            st.markdown("---")
+
+            # Other structure questions
             if structure_questions:
                 num_cols = min(len(structure_questions), 3)
                 cols = st.columns(num_cols)
@@ -1746,16 +1784,15 @@ def page_role_selection():
                             step=5, format="%d%%", key=f"weight_{weight_key}"
                         )
 
-                struct_q_total = sum(weight_values.get(q.get("weight_key", f"sub_{q['id']}"), 0) for q in structure_questions)
-                if struct_q_total > 0:
-                    st.caption(f"Total: {struct_q_total}% → normalized to 100%")
-                else:
-                    st.warning("At least one sub-weight must be > 0")
+            # Total includes roof + all structure questions
+            struct_q_total = weight_values.get("sub_roof", 0) + sum(weight_values.get(q.get("weight_key", f"sub_{q['id']}"), 0) for q in structure_questions)
+            if struct_q_total > 0:
+                st.caption(f"Total: {struct_q_total}% → normalized to 100%")
             else:
-                st.info(TEXT["no_questions_in_category"][L])
+                st.warning("At least one sub-weight must be > 0")
 
         # ─────────────────────────────────────────────────────────
-        # PANEL 3: CONSUMPTION QUESTIONS WEIGHTS
+        # PANEL 2: CONSUMPTION QUESTIONS WEIGHTS
         # ─────────────────────────────────────────────────────────
         with st.expander(f"⚙️ {TEXT['consumption_questions_panel'][L]}", expanded=False):
             st.markdown(f"""
@@ -1866,6 +1903,11 @@ def page_role_selection():
                     if st.button(TEXT["edit_question"][L], key=f"edit_q_{question['id']}", use_container_width=True):
                         st.session_state["editing_question_id"] = question["id"]
                         st.session_state["show_add_question"] = False
+                        # Clear initialization flags so new question data loads
+                        if "edit_options_initialized" in st.session_state:
+                            del st.session_state["edit_options_initialized"]
+                        if "edit_thresholds_initialized" in st.session_state:
+                            del st.session_state["edit_thresholds_initialized"]
                         st.rerun()
                 with q_col3:
                     if st.button(TEXT["delete_question"][L], key=f"del_q_{question['id']}", use_container_width=True):
