@@ -65,26 +65,6 @@ The final score combines these factors and provides:
 
 ---
 
-## What makes a good site for Solar21?
-
-The tool evaluates sites based on factors that indicate a successful solar partnership:
-
-**Roof characteristics**
-- Larger roofs (>1000 m²) score higher
-- Suitable pitch and orientation for solar panels
-
-**Owner profile**
-- Public entities and large institutions typically have easier financing
-- Owners with visible sustainability commitments are more receptive
-
-**Energy consumption**
-- Higher electricity spend means greater potential savings
-- Daytime consumption aligns well with solar production
-- Stable year-round consumption is preferable to highly seasonal usage
-- 24/7 equipment (servers, cold storage) increases direct solar usage
-
----
-
 ## For Solar21 Employees
 
 Employees can access a configuration section (password protected) to:
